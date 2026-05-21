@@ -1,58 +1,18 @@
-'use client';
+'use client'
 
-import dynamic from 'next/dynamic';
-import { supabase } from '../lib/supabase';
-import { useEffect, useState } from 'react';
+import Link from 'next/link'
+import { useEffect } from 'react'
 
-const Map = dynamic(() => import('../components/Map'), {
-  ssr: false,
-  loading: () => <p>Loading map...</p>
-});
-
-export default function Page() {
-  const [location, setLocation] = useState(null)
-
-  useEffect(() => {
-    async function testConnection() {
-      console.log("SUPABASE DEBUG:")
-      const { data, error } = await supabase.from('locations').select('*')
-      console.log('data:', data)
-      console.log('error:', error)
-    }
-    testConnection()
-  }, [])
-
-  async function fetchRandomLocation() {
-    const { data, error } = await supabase
-      .from('locations')
-      .select('*')
-
-    if (error) console.error(error)
-
-    const random = data[Math.floor(Math.random() * data.length)]
-    setLocation(random)
-  }
-
-  useEffect(() => {
-    fetchRandomLocation()
-  }, [])
-
-  return (
-    <div>
-      {location ? (
-        <div>
-          <p>"{location.title}"</p>
-          <img
-            src={location.image_url}
-            alt={location.title}
-            style={{ width: '500px', height: '400px', objectFit: 'contain' }}
-          />
+export default function Home() {
+    return (
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100vh', backgroundColor: '#111', color: 'white' }}>
+            <h1 style={{ fontSize: '3rem', fontWeight: 'bold', marginBottom: '16px' }}>BCAGuessr</h1>
+            <p style={{ color: '#9ca3af', marginBottom: '32px' }}>geoguessr but bca</p>
+            <Link href="/game" style={{ textDecoration: 'none' }}>
+                <button style={{ padding: '12px 32px', backgroundColor: '#22c55e', color: 'white', border: 'none', borderRadius: '999px', fontSize: '1.1rem', fontWeight: 'bold', cursor: 'pointer' }}>
+                    Play
+                </button>
+            </Link>
         </div>
-      ) : (
-        <p>Loading...</p>
-      )}
-      <button onClick={fetchRandomLocation}>Next Image</button>
-      <Map />
-    </div>
-  );
+    )
 }
