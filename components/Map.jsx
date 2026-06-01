@@ -39,11 +39,25 @@ export default function Map() {
 			// Check if map already exists
 			if (!mapRef.current) {
 				// Initialize the map
-				mapRef.current = L.map('map').setView([40.90214044934155, -74.03417229652406], 18);
+				mapRef.current = L.map('map', {
+					maxBounds: [
+						[40.899799, -74.036694],  // Southwest: [lat, lng]
+						[40.903955, -74.029924]   // Northeast: [lat, lng]
+					],
+					minZoom: 18,
+					maxZoom: 22,
+					maxBoundsViscosity: 1.0
+				}).setView([PREDEFINED_POINT.lat, PREDEFINED_POINT.lng], 19); // Start at zoom 19
 
 				// Add tile layer
 				L.tileLayer('https://{s}.google.com/vt/lyrs=y&x={x}&y={y}&z={z}', {
+					maxBounds: [
+						[40.899799, 40.903955],
+						[-74.036694, -74.029924]
+					],
+					minZoom: 18,
 					maxZoom: 22,
+					maxBoundsViscosity: 1.0,
 					subdomains: ['mt0', 'mt1', 'mt2', 'mt3'],
 					attribution: '&copy; <a href="https://www.google.com/maps">Google</a>'
 				}).addTo(mapRef.current);
@@ -100,13 +114,3 @@ export default function Map() {
 	return <div id="map"></div>;
 }
 
-// logging movement
-// mapRef.current.on('moveend', function() {
-//   const center = mapRef.current.getCenter();
-//   const zoom = mapRef.current.getZoom();
-//   console.log('Map position changed:');
-//   console.log(`Latitude: ${center.lat}`);
-//   console.log(`Longitude: ${center.lng}`);
-//   console.log(`Zoom level: ${zoom}`);
-//   console.log('---');
-// });
