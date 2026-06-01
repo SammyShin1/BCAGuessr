@@ -3,111 +3,128 @@
 import dynamic from 'next/dynamic';
 import { supabase } from '../../lib/supabase';
 import { useEffect, useState } from 'react';
+import Link from 'next/link';
+import '../globals.css'
 
 const Map = dynamic(() => import('../../components/Map'), {
   ssr: false,
-  loading: () => <p>Loading map...</p>
+  loading: () => <p className="loading">Loading map...</p>
 });
 
-export default function Page() {
-  const [location, setLocation] = useState(null)
-  const [round, setRound] = useState(1)
-  const [totalScore, setTotalScore] = useState(0)
-  const [lastScore, setLastScore] = useState(0)
-  const [roundOver, setRoundOver] = useState(false)
-  const [gameOver, setGameOver] = useState(false)
-  const TOTAL_ROUNDS = 5
-
-  // useEffect(() => {
-  //   async function testConnection() {
-  //     console.log("SUPABASE DEBUG:")
-  //     const { data, error } = await supabase.from('locations').select('*')
-  //     console.log('data:', data)
-  //     console.log('error:', error)
-  //   }
-  //   testConnection()
-  // }, [])
-
-  function nextRound(score) {
-    setLastScore(score)
-    setTotalScore(prev => prev + score)
-    setRoundOver(true)
-  }
-
-  function continueGame() {
-    setRoundOver(false)
-    if (round >= TOTAL_ROUNDS) {
-      setGameOver(true)
-    } else {
-      setRound(prev => prev + 1)
-      fetchRandomLocation()
-    }
-  }
+export default function GamePage() {
+  const [location, setLocation] = useState(null);
+  const [round, setRound] = useState(1);
+  const [totalScore, setTotalScore] = useState(0);
+  const [lastScore, setLastScore] = useState(0);
+  const [roundOver, setRoundOver] = useState(false);
+  const [gameOver, setGameOver] = useState(false);
+  const TOTAL_ROUNDS = 5;
 
   async function fetchRandomLocation() {
     const { data, error } = await supabase
-      .from('locations')
-      .select('*')
+  .from('locations')
+  .select('*, latitude, longitude')
+    if (error) console.error(error);
+    if (data && data.length > 0) {
+      const random = data[Math.floor(Math.random() * data.length)];
+      setLocation(random);
+    }
+  }
 
-    if (error) console.error(error)
+  function nextRound(score) {
+    setLastScore(score);
+    setTotalScore(prev => prev + score);
+    setRoundOver(true);
+  }
 
-    const random = data[Math.floor(Math.random() * data.length)]
-    setLocation(random)
+  function continueGame() {
+    setRoundOver(false);
+    if (round >= TOTAL_ROUNDS) {
+      setGameOver(true);
+    } else {
+      setRound(prev => prev + 1);
+      fetchRandomLocation();
+    }
+  }
+
+  function resetGame() {
+    setRound(1);
+    setTotalScore(0);
+    setGameOver(false);
+    setRoundOver(false);
+    fetchRandomLocation();
   }
 
   useEffect(() => {
-    fetchRandomLocation()
-  }, [])
+    fetchRandomLocation();
+  }, []);
 
   if (roundOver) {
     return (
-      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100vh', backgroundColor: '#111', color: 'white' }}>
-        <h2 style={{ fontSize: '2rem', fontWeight: 'bold', marginBottom: '8px' }}>Round {round} Complete!</h2>
-        <p style={{ fontSize: '1.5rem', margin: '8px 0' }}>Score: {lastScore} / 5000</p>
-        <p style={{ fontSize: '1rem', color: '#9ca3af', marginBottom: '16px' }}>Total: {totalScore} / {round * 5000}</p>
-
-        <div style={{ width: '100%', height: '400px' }}>
-          <Map showAnswer={true} location={location} />
+      <div style={{ textAlign: 'center', padding: '2rem 1rem' }}>
+        <div className="card" style={{ maxWidth: '800px', margin: '0 auto' }}>
+          <h2 style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>Round {round} Complete!</h2>
+          <p style={{ fontSize: '1.5rem', margin: '0.5rem 0' }}>
+            Score: <span className="score-display">{lastScore}</span> / 5000
+          </p>
+          <p style={{ color: '#9ca3af', marginBottom: '1rem' }}>
+            Total: {totalScore} / {round * 5000}
+          </p>
+          <div className="map-container">
+            <Map showAnswer={true} location={location} />
+          </div>
+          <button onClick={continueGame} className="btn btn-primary" style={{ marginTop: '1rem' }}>
+            {round >= TOTAL_ROUNDS ? 'See Final Score' : 'Next Round'}
+          </button>
         </div>
-
-        <button onClick={continueGame}
-          style={{ marginTop: '16px', marginBottom: '16px', padding: '12px 32px', backgroundColor: '#22c55e', color: 'white', border: 'none', borderRadius: '999px', fontSize: '1.1rem', fontWeight: 'bold', cursor: 'pointer' }}>
-          {round >= TOTAL_ROUNDS ? 'See Final Score' : 'Next Round'}
-        </button>
       </div>
-    )
+    );
   }
 
   if (gameOver) {
     return (
-      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100vh', backgroundColor: '#111', color: 'white' }}>
-        <h1 style={{ fontSize: '2rem', fontWeight: 'bold' }}>Game Over!</h1>
-        <p style={{ fontSize: '1.5rem', margin: '16px 0' }}>Total Score: {totalScore} / {TOTAL_ROUNDS * 5000}</p>
-        <button onClick={() => { setRound(1); setTotalScore(0); setGameOver(false); fetchRandomLocation(); }}
-          style={{ padding: '12px 32px', backgroundColor: '#22c55e', color: 'white', border: 'none', borderRadius: '999px', fontSize: '1.1rem', fontWeight: 'bold', cursor: 'pointer' }}>
-          Play Again
-        </button>
+      <div style={{ textAlign: 'center', padding: '2rem 1rem' }}>
+        <div className="card" style={{ maxWidth: '600px', margin: '0 auto' }}>
+          <h1 style={{ fontSize: '3rem', marginBottom: '1rem' }}>Game Over!</h1>
+          <p style={{ fontSize: '1.5rem', margin: '1rem 0' }}>
+            Total Score: <span className="score-display">{totalScore}</span> / {TOTAL_ROUNDS * 5000}
+          </p>
+          <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center', marginTop: '2rem' }}>
+            <button onClick={resetGame} className="btn btn-primary">
+              Play Again
+            </button>
+            <Link href="/">
+              <button className="btn">Back to Home</button>
+            </Link>
+          </div>
+        </div>
       </div>
-    )
+    );
+  }
+
+  if (!location) {
+    return <div className="loading">Loading game...</div>;
   }
 
   return (
-    <div>
-      <h2>Round {round}/{TOTAL_ROUNDS}</h2>
-
-      {location ? (
-        <div>
-          <p>"{location.title}"</p>
-          <img
-            src={location.image_url}
-            alt={location.title}
-            style={{ width: '500px', height: '400px', objectFit: 'contain' }}
-          />
+    <div style={{ padding: '1rem 0' }}>
+      <div className="card">
+        <div className="round-header">
+          Round {round}/{TOTAL_ROUNDS}
         </div>
-      ) : (
-        <p>Loading...</p>
-      )}
-      <Map onGuess={nextRound} location={location} />
+        <p style={{ fontSize: '1.25rem', marginBottom: '0.5rem' }}>"{location.title}"</p>
+        <img
+          src={location.image_url}
+          alt={location.title}
+          className="game-image"
+        />
+        <div className="map-container">
+          <Map onGuess={nextRound} location={location} />
+        </div>
+        <p style={{ color: '#9ca3af', fontSize: '0.875rem', marginTop: '1rem' }}>
+          Click on the map to place your guess. Score is based on distance from the correct location.
+        </p>
+      </div>
     </div>
   );
 }

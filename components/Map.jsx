@@ -5,7 +5,12 @@ import { useState, useEffect, useRef } from 'react';
 export default function Map({ onGuess, location, showAnswer }) {
 	const mapRef = useRef(null);
 	const markerRef = useRef(null);
+	const showAnswerRef = useRef(showAnswer);
 	const [clickPosition, setClickPosition] = useState(null);
+
+	useEffect(() => {
+		showAnswerRef.current = showAnswer
+	}, [showAnswer])
 
 	const PREDEFINED_POINT = {
 		lat: 40.90214044934155,
@@ -58,6 +63,8 @@ export default function Map({ onGuess, location, showAnswer }) {
 				}).addTo(mapRef.current);
 
 				mapRef.current.on('click', (e) => {
+					if (showAnswerRef.current) return;
+
 					const { lat, lng } = e.latlng;
 
 					if (markerRef.current) {
@@ -89,7 +96,7 @@ export default function Map({ onGuess, location, showAnswer }) {
 			import('leaflet').then((L) => {
 				L.marker([location.latitude, location.longitude])
 					.addTo(mapRef.current)
-					.bindPopup(`<b>Actual Location</b><br>${location.title}`)
+					.bindPopup(`<b>Actual Location</b><br>${location.title}<br>Lat: ${location.latitude.toFixed(6)}<br>Lng: ${location.longitude.toFixed(6)}`)
 					.openPopup();
 				mapRef.current.setView([PREDEFINED_POINT.lat, PREDEFINED_POINT.lng], 19);
 			});
@@ -99,7 +106,7 @@ export default function Map({ onGuess, location, showAnswer }) {
 	return (
 		<div>
 			<div id="map"></div>
-			{clickPosition && (
+			{clickPosition && !showAnswer && (
 				<button onClick={() => onGuess(clickPosition.score)}>
 					Submit Guess
 				</button>

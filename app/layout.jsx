@@ -1,3 +1,5 @@
+import './globals.css'
+
 export default function RootLayout({ children }) {
   return (
     <html lang="en" style={{ margin: 0, padding: 0 }} >
