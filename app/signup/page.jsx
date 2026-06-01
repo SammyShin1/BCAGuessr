@@ -1,12 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { supabase } from "../../lib/supabase";
 
 export default function SignupPage() {
-  const router = useRouter();
-
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
@@ -31,9 +28,12 @@ export default function SignupPage() {
 
     setLoading(true);
 
-    const { data, error } = await supabase.auth.signUp({
+    const { error } = await supabase.auth.signUp({
       email: cleanedEmail,
       password: password,
+      options: {
+        emailRedirectTo: "http://localhost:3000/login",
+      },
     });
 
     setLoading(false);
@@ -43,9 +43,11 @@ export default function SignupPage() {
       return;
     }
 
-    setMessage("Signup successful!");
-
-    router.push("/game");
+    setEmail("");
+    setPassword("");
+    setMessage(
+      "Signup successful! Check your Bergen email to confirm your account before logging in."
+    );
   };
 
   return (
