@@ -41,18 +41,25 @@ export default function Map({ onGuess, location, showAnswer }) {
 	useEffect(() => {
 		import('leaflet').then((L) => {
 			if (!mapRef.current) {
+				// Initialize the map
 				mapRef.current = L.map('map', {
 					maxBounds: [
-						[40.8990, -74.0380],
-						[40.9055, -74.0305],
+						[40.899799, -74.036694],  // Southwest: [lat, lng]
+						[40.903955, -74.029924]   // Northeast: [lat, lng]
 					],
-					maxBoundsViscosity: 0.75,
-					minZoom: 19,
-					maxZoom: 22
-				}).setView([40.90214044934155, -74.03417229652406], 19);
+					minZoom: 18,
+					maxZoom: 22,
+					maxBoundsViscosity: 1.0
+				}).setView([PREDEFINED_POINT.lat, PREDEFINED_POINT.lng], 19); // Start at zoom 19
 
 				L.tileLayer('https://{s}.google.com/vt/lyrs=y&x={x}&y={y}&z={z}', {
+					maxBounds: [
+						[40.899799, 40.903955],
+						[-74.036694, -74.029924]
+					],
+					minZoom: 18,
 					maxZoom: 22,
+					maxBoundsViscosity: 1.0,
 					subdomains: ['mt0', 'mt1', 'mt2', 'mt3'],
 					attribution: '&copy; <a href="https://www.google.com/maps">Google</a>'
 				}).addTo(mapRef.current);
@@ -84,26 +91,6 @@ export default function Map({ onGuess, location, showAnswer }) {
 		};
 	}, []);
 
-	useEffect(() => {
-		if (showAnswer && location && mapRef.current) {
-			import('leaflet').then((L) => {
-				L.marker([location.latitude, location.longitude])
-					.addTo(mapRef.current)
-					.bindPopup(`<b>Actual Location</b><br>${location.title}`)
-					.openPopup()
-				mapRef.current.setView([40.90214044934155, -74.03417229652406], 19)
-			})
-		}
-	}, [showAnswer, location])
-
-	return (
-		<div>
-			<div id="map"></div>
-			{clickPosition && (
-				<button onClick={() => onGuess(clickPosition.score)}>
-					Submit Guess
-				</button>
-			)}
-		</div>
-	)
+	return <div id="map"></div>;
 }
+
