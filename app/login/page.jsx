@@ -1,39 +1,34 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { supabase } from "../../lib/supabase";
 
-export default function SignupPage() {
+export default function LoginPage() {
+  const router = useRouter();
+
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
 
-  const handleSignup = async (event) => {
+  const handleLogin = async (event) => {
     event.preventDefault();
     setMessage("");
 
     const cleanedEmail = email.trim().toLowerCase();
 
     if (!cleanedEmail.endsWith("@bergen.org")) {
-      setMessage("You must use a @bergen.org email to sign up.");
-      return;
-    }
-
-    if (password.length < 6) {
-      setMessage("Password must be at least 6 characters.");
+      setMessage("You must use a @bergen.org email to log in.");
       return;
     }
 
     setLoading(true);
 
-    const { error } = await supabase.auth.signUp({
+    const { data, error } = await supabase.auth.signInWithPassword({
       email: cleanedEmail,
       password: password,
-      options: {
-        emailRedirectTo: "http://localhost:3000/login",
-      },
     });
 
     setLoading(false);
@@ -43,18 +38,16 @@ export default function SignupPage() {
       return;
     }
 
-    setEmail("");
-    setPassword("");
-    setMessage(
-      "Signup successful! Check your Bergen email to confirm your account before logging in."
-    );
+    console.log("Logged in user:", data.user);
+
+    router.push("/game");
   };
 
   return (
     <main style={{ maxWidth: "400px", margin: "80px auto", padding: "20px" }}>
-      <h1>Sign Up</h1>
+      <h1>Log In</h1>
 
-      <form onSubmit={handleSignup}>
+      <form onSubmit={handleLogin}>
         <label>Email</label>
         <input
           type="email"
@@ -73,7 +66,7 @@ export default function SignupPage() {
         <label>Password</label>
         <input
           type="password"
-          placeholder="Create a password"
+          placeholder="Enter your password"
           value={password}
           onChange={(event) => setPassword(event.target.value)}
           required
@@ -86,14 +79,14 @@ export default function SignupPage() {
         />
 
         <button type="submit" disabled={loading}>
-          {loading ? "Signing up..." : "Sign Up"}
+          {loading ? "Logging in..." : "Log In"}
         </button>
       </form>
 
       {message && <p>{message}</p>}
 
       <p>
-        Already have an account? <a href="/login">Log in</a>
+        Need an account? <a href="/signup">Sign up</a>
       </p>
     </main>
   );
