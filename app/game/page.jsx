@@ -3,8 +3,9 @@
 import dynamic from 'next/dynamic';
 import { supabase } from '../../lib/supabase';
 import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import '../globals.css'
+import '../globals.css';
 
 const Map = dynamic(() => import('../../components/Map'), {
   ssr: false,
@@ -12,6 +13,8 @@ const Map = dynamic(() => import('../../components/Map'), {
 });
 
 export default function GamePage() {
+  const router = useRouter();
+  const [checkingAuth, setCheckingAuth] = useState(true);
   const [location, setLocation] = useState(null);
   const [round, setRound] = useState(1);
   const [totalScore, setTotalScore] = useState(0);
@@ -31,21 +34,48 @@ export default function GamePage() {
     }
   }
 
+  async function saveScore(finalScore, mode = "normal") {
+    const { data: userData, error: userError } = await supabase.auth.getUser();
+
+    if (userError || !userData.user) {
+      console.error("No logged-in user found:", userError);
+      return;
+  }
+
+  const { error } = await supabase.from("leaderboard").insert({
+      user_id: userData.user.id,
+      email: userData.user.email,
+      username: userData.user.email.split("@")[0],
+      score: finalScore,
+      mode: mode,
+      challenge_date:
+        mode === "daily" ? new Date().toISOString().split("T")[0] : null,
+    });
+
+    if (error) {
+      console.error("Error saving score:", error);
+    }
+  }
+
   function nextRound(score) {
     setLastScore(score);
     setTotalScore(prev => prev + score);
     setRoundOver(true);
   }
 
-  function continueGame() {
+  async function continueGame() {
     setRoundOver(false);
+
     if (round >= TOTAL_ROUNDS) {
+      await saveScore(totalScore, "normal");
       setGameOver(true);
     } else {
       setRound(prev => prev + 1);
       fetchRandomLocation();
     }
   }
+
+  
 
   function resetGame() {
     setRound(1);
@@ -55,9 +85,32 @@ export default function GamePage() {
     fetchRandomLocation();
   }
 
-  useEffect(() => {
-    fetchRandomLocation();
-  }, []);
+
+    useEffect(() => {
+    async function checkUserAndLoadGame() {
+      const { data, error } = await supabase.auth.getUser();
+
+      if (error || !data.user) {
+        router.push('/login');
+        return;
+      }
+
+      if (!data.user.email.endsWith('@bergen.org')) {
+        await supabase.auth.signOut();
+        router.push('/login');
+        return;
+      }
+
+      setCheckingAuth(false);
+      fetchRandomLocation();
+    }
+
+    checkUserAndLoadGame();
+  }, [router]);
+
+  if (checkingAuth) {
+    return <div className="loading">Checking login...</div>;
+  }
 
   if (roundOver) {
     return (
@@ -93,6 +146,11 @@ export default function GamePage() {
             <button onClick={resetGame} className="btn btn-primary">
               Play Again
             </button>
+
+            <Link href="/leaderboard">
+              <button className="btn">View Leaderboard</button>
+            </Link>
+
             <Link href="/">
               <button className="btn">Back to Home</button>
             </Link>
