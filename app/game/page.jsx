@@ -18,12 +18,13 @@ export default function GamePage() {
   const [lastScore, setLastScore] = useState(0);
   const [roundOver, setRoundOver] = useState(false);
   const [gameOver, setGameOver] = useState(false);
+  const [userGuess, setUserGuess] = useState(null); // Store guess coordinates and score
   const TOTAL_ROUNDS = 5;
 
   async function fetchRandomLocation() {
     const { data, error } = await supabase
-  .from('locations')
-  .select('*, latitude, longitude')
+      .from('locations')
+      .select('*, latitude, longitude');
     if (error) console.error(error);
     if (data && data.length > 0) {
       const random = data[Math.floor(Math.random() * data.length)];
@@ -31,14 +32,16 @@ export default function GamePage() {
     }
   }
 
-  function nextRound(score) {
+  function nextRound(score, guessLat, guessLng) {
     setLastScore(score);
     setTotalScore(prev => prev + score);
+    setUserGuess({ lat: guessLat, lng: guessLng, score });
     setRoundOver(true);
   }
 
   function continueGame() {
     setRoundOver(false);
+    setUserGuess(null); // Clear guess for next round
     if (round >= TOTAL_ROUNDS) {
       setGameOver(true);
     } else {
@@ -52,6 +55,7 @@ export default function GamePage() {
     setTotalScore(0);
     setGameOver(false);
     setRoundOver(false);
+    setUserGuess(null);
     fetchRandomLocation();
   }
 
@@ -71,7 +75,11 @@ export default function GamePage() {
             Total: {totalScore} / {round * 5000}
           </p>
           <div className="map-container">
-            <Map showAnswer={true} location={location} />
+            <Map 
+              showAnswer={true} 
+              location={location} 
+              userGuess={userGuess}  // Pass the guess to Map
+            />
           </div>
           <button onClick={continueGame} className="btn btn-primary" style={{ marginTop: '1rem' }}>
             {round >= TOTAL_ROUNDS ? 'See Final Score' : 'Next Round'}
@@ -113,16 +121,18 @@ export default function GamePage() {
           Round {round}/{TOTAL_ROUNDS}
         </div>
         <p style={{ fontSize: '1.25rem', marginBottom: '0.5rem' }}>"{location.title}"</p>
-        <img
-          src={location.image_url}
-          alt={location.title}
-          className="game-image"
-        />
-        <div className="map-container">
-          <Map onGuess={nextRound} location={location} />
+        <div className="game-container">
+          <img
+            src={location.image_url}
+            alt={location.title}
+            className="game-image"
+          />
+          <div className="map-container">
+            <Map onGuess={nextRound} location={location} />
+          </div>
         </div>
         <p style={{ color: '#9ca3af', fontSize: '0.875rem', marginTop: '1rem' }}>
-          Click on the map to place your guess. Score is based on distance from the correct location.
+          Click on the map to place your marker, then click Submit. Score is based on distance.
         </p>
       </div>
     </div>
