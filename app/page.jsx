@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { supabase } from "../lib/supabase";
 import "./globals.css";
 
@@ -31,6 +31,7 @@ export default function HomePage() {
   const router = useRouter();
   const [showModal, setShowModal] = useState(false);
   const [pendingSessionId, setPendingSessionId] = useState(null);
+  const [user, setUser] = useState(null);
 
   async function checkAuthOrRedirect() {
     const { data, error } = await supabase.auth.getUser();
@@ -42,6 +43,21 @@ export default function HomePage() {
     }
     return data.user;
   }
+
+  async function handleLogout() {
+    await supabase.auth.signOut();
+    setUser(null);
+  }
+
+  useEffect(() => {
+    async function loadUser() {
+      const { data, error } = await supabase.auth.getUser();
+      if (!error && data?.user) {
+        setUser(data.user);
+      }
+    }
+    loadUser();
+  }, []);
 
   async function handleStartPlaying() {
     const user = await checkAuthOrRedirect();
@@ -106,13 +122,24 @@ export default function HomePage() {
           Start Playing
         </button>
 
-        <div style={{ marginTop: "1rem", display: "flex", gap: "1rem", justifyContent: "center" }}>
-          <Link href="/login">
-            <button className="btn">Log In</button>
-          </Link>
-          <Link href="/signup">
-            <button className="btn">Sign Up</button>
-          </Link>
+        <div style={{ marginTop: "1rem", display: "flex", gap: "1rem", justifyContent: "center", alignItems: "center" }}>
+          {user ? (
+            <>
+              <span style={{ color: "#fff", fontWeight: 600 }}>
+                Logged in as: {user.email || user.user_metadata?.full_name || "User"}
+              </span>
+              <button onClick={handleLogout} className="btn">Log Out</button>
+            </>
+          ) : (
+            <>
+              <Link href="/login">
+                <button className="btn">Log In</button>
+              </Link>
+              <Link href="/signup">
+                <button className="btn">Sign Up</button>
+              </Link>
+            </>
+          )}
         </div>
       </div>
 

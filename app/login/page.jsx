@@ -40,7 +40,7 @@ export default function LoginPage() {
 
     console.log("Logged in user:", data.user);
 
-    router.push("/game");
+    router.push("/");
   };
 
   return (

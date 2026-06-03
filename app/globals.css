@@ -1,452 +1,455 @@
-@import 'leaflet/dist/leaflet.css';
+  @import 'leaflet/dist/leaflet.css';
 
-:root {
-  --primary: #22c55e;
-  --primary-dark: #16a34a;
-  --bg-dark: #0f0f0f;
-  --bg-card: #1a1a1a;
-  --text-primary: #ffffff;
-  --text-secondary: #9ca3af;
-  --border: #2a2a2a;
-  --error: #ef4444;
-}
+  :root {
+    --primary: #22c55e;
+    --primary-dark: #16a34a;
+    --bg-dark: #0f0f0f;
+    --bg-card: #1a1a1a;
+    --text-primary: #ffffff;
+    --text-secondary: #9ca3af;
+    --border: #2a2a2a;
+    --error: #ef4444;
+  }
 
-* {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
-}
+  * {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+  }
 
-body {
-  background: var(--bg-dark);
-  color: var(--text-primary);
-  font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
-  line-height: 1.5;
-}
+  body {
+    background: var(--bg-dark);
+    color: var(--text-primary);
+    font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+    line-height: 1.5;
+  }
 
-/* Container */
-.container {
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 0 1.5rem;
-}
+  /* Container */
+  .container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 1.5rem;
+  }
 
-/* Navbar */
-.navbar {
-  background: rgba(15, 15, 15, 0.95);
-  backdrop-filter: blur(10px);
-  border-bottom: 1px solid var(--border);
-  position: sticky;
-  top: 0;
-  z-index: 50;
-}
+  /* Navbar */
+  .navbar {
+    background: rgba(15, 15, 15, 0.95);
+    backdrop-filter: blur(10px);
+    border-bottom: 1px solid var(--border);
+    position: sticky;
+    top: 0;
+    z-index: 50;
+  }
 
-.navbar-content {
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 1rem 1.5rem;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  flex-wrap: wrap;
-  gap: 1rem;
-}
-
-.logo {
-  font-size: 1.5rem;
-  font-weight: bold;
-  background: linear-gradient(135deg, #22c55e, #3b82f6);
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
-  text-decoration: none;
-}
-
-.nav-links {
-  display: flex;
-  gap: 2rem;
-  align-items: center;
-}
-
-.nav-link {
-  color: var(--text-secondary);
-  text-decoration: none;
-  font-weight: 500;
-  transition: color 0.2s;
-  padding: 0.5rem 0;
-}
-
-.nav-link:hover {
-  color: var(--primary);
-}
-
-.game-container {
-  display: flex;
-  height: 100%;
-}
-
-/* Buttons */
-.btn {
-  padding: 0.75rem 1.5rem;
-  border: none;
-  border-radius: 9999px;
-  font-weight: bold;
-  font-size: 1rem;
-  cursor: pointer;
-  transition: all 0.2s;
-  background: var(--bg-card);
-  color: var(--text-primary);
-  border: 1px solid var(--border);
-}
-
-.btn-primary {
-  background: var(--primary);
-  color: white;
-  border: none;
-}
-
-.btn-primary:hover {
-  background: var(--primary-dark);
-  transform: scale(1.02);
-}
-
-.btn-large {
-  padding: 1rem 2rem;
-  font-size: 1.1rem;
-}
-
-/* Cards */
-.card {
-  background: var(--bg-card);
-  border-radius: 1rem;
-  border: 1px solid var(--border);
-  padding: 1.5rem;
-}
-
-/* Game specific */
-.game-image {
-  width: 100%;
-  max-width: 600px;
-  height: auto;
-  max-height: 400px;
-  object-fit: contain;
-  border-radius: 1rem;
-  margin: 1rem 0;
-  background: #0a0a0a;
-}
-
-.map-container {
-  width: 100%;
-  height: 500px;
-  border-radius: 1rem;
-  overflow: hidden;
-  border: 1px solid var(--border);
-  margin: 1rem 0;
-}
-
-.round-header {
-  font-size: 1.5rem;
-  font-weight: bold;
-  margin-bottom: 0.5rem;
-}
-
-.score-display {
-  font-size: 1.25rem;
-  color: var(--primary);
-  font-weight: bold;
-}
-
-.answer-section {
-  margin-top: 1rem;
-  padding: 1rem;
-  background: rgba(34, 197, 94, 0.1);
-  border-radius: 0.75rem;
-}
-
-/* Hero section */
-.hero {
-  text-align: center;
-  padding: 4rem 1rem;
-}
-
-.hero h1 {
-  font-size: 3rem;
-  margin-bottom: 1rem;
-  background: linear-gradient(135deg, #fff, #22c55e);
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
-}
-
-.feature-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-  gap: 2rem;
-  margin: 3rem 0;
-}
-
-.feature-card {
-  background: var(--bg-card);
-  padding: 1.5rem;
-  border-radius: 1rem;
-  text-align: center;
-  border: 1px solid var(--border);
-}
-
-/* Loading */
-.loading {
-  text-align: center;
-  padding: 2rem;
-  color: var(--text-secondary);
-}
-
-/* Responsive */
-@media (max-width: 768px) {
   .navbar-content {
-    flex-direction: column;
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 1rem 1.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 1rem;
   }
-  
-  .hero h1 {
-    font-size: 2rem;
+
+  .logo {
+    font-size: 1.5rem;
+    font-weight: bold;
+    background: linear-gradient(135deg, #22c55e, #3b82f6);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    text-decoration: none;
   }
-  
-  .map-container {
-    height: 350px;
+
+  .nav-links {
+    display: flex;
+    gap: 2rem;
+    align-items: center;
   }
-  
-  .game-image {
-    max-height: 250px;
+
+  .nav-link {
+    color: var(--text-secondary);
+    text-decoration: none;
+    font-weight: 500;
+    transition: color 0.2s;
+    padding: 0.5rem 0;
   }
-}
 
-/* Map Styles */
-.map-wrapper {
-  position: relative;
-  width: 100%;
-  height: 500px;
-  border-radius: 0.75rem;
-  overflow: hidden;
-  background: #0a0a0a;
-}
-
-.map-container-leaflet {
-  width: 100%;
-  height: 100%;
-  z-index: 1;
-  cursor: crosshair;
-}
-
-/* Guess Info Panel (before submission) */
-.guess-info-panel {
-  position: absolute;
-  bottom: 20px;
-  right: 20px;
-  background: rgba(0, 0, 0, 0.9);
-  backdrop-filter: blur(10px);
-  border: 1px solid rgba(34, 197, 94, 0.3);
-  border-radius: 0.75rem;
-  padding: 1rem;
-  min-width: 200px;
-  z-index: 1000;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
-}
-
-.guess-info-title {
-  font-size: 0.875rem;
-  font-weight: 600;
-  color: #22c55e;
-  margin-bottom: 0.5rem;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
-
-.guess-info-detail {
-  font-size: 0.75rem;
-  font-family: 'Courier New', monospace;
-  color: #9ca3af;
-  margin-bottom: 0.75rem;
-  line-height: 1.4;
-}
-
-.btn-submit {
-  width: 100%;
-  background: linear-gradient(135deg, #22c55e, #16a34a);
-  color: white;
-  border: none;
-  padding: 0.5rem 1rem;
-  border-radius: 0.5rem;
-  font-weight: 600;
-  font-size: 0.875rem;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.btn-submit:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(34, 197, 94, 0.3);
-}
-
-.btn-submit:active {
-  transform: translateY(0);
-}
-
-/* Score Panel (after submission, before round ends) */
-.score-panel {
-  position: absolute;
-  bottom: 20px;
-  right: 20px;
-  background: rgba(0, 0, 0, 0.9);
-  backdrop-filter: blur(10px);
-  border: 1px solid rgba(34, 197, 94, 0.5);
-  border-radius: 0.75rem;
-  padding: 1rem;
-  min-width: 220px;
-  z-index: 1000;
-  animation: slideIn 0.3s ease-out;
-}
-
-.score-title {
-  font-size: 0.875rem;
-  font-weight: 600;
-  color: #22c55e;
-  margin-bottom: 0.5rem;
-}
-
-.score-detail {
-  font-size: 0.75rem;
-  color: #9ca3af;
-  margin-bottom: 0.25rem;
-}
-
-.score-value {
-  font-size: 1.25rem;
-  font-weight: bold;
-  color: #22c55e;
-  margin: 0.5rem 0;
-}
-
-.score-waiting {
-  font-size: 0.7rem;
-  color: #6b7280;
-  margin-top: 0.5rem;
-  font-style: italic;
-}
-
-/* Answer Panel (round complete) */
-.answer-panel {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  background: rgba(0, 0, 0, 0.95);
-  backdrop-filter: blur(10px);
-  border: 2px solid #22c55e;
-  border-radius: 1rem;
-  padding: 1.5rem;
-  min-width: 300px;
-  max-width: 400px;
-  z-index: 1000;
-  text-align: center;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
-  animation: zoomIn 0.3s ease-out;
-}
-
-.answer-title {
-  font-size: 1.25rem;
-  font-weight: bold;
-  color: #22c55e;
-  margin-bottom: 1rem;
-}
-
-.answer-location {
-  font-size: 1rem;
-  color: white;
-  margin-bottom: 0.75rem;
-  word-break: break-word;
-}
-
-.answer-score {
-  font-size: 1.125rem;
-  color: #9ca3af;
-  margin: 0.75rem 0;
-}
-
-.answer-score .highlight {
-  color: #22c55e;
-  font-size: 1.5rem;
-  font-weight: bold;
-}
-
-.answer-distance {
-  font-size: 0.875rem;
-  color: #6b7280;
-  margin-top: 0.5rem;
-}
-
-/* Custom Leaflet Marker Styles */
-.answer-marker {
-  background: none;
-  border: none;
-  font-size: 2rem;
-  filter: drop-shadow(0 2px 4px rgba(0,0,0,0.5));
-}
-
-/* Animations */
-@keyframes slideIn {
-  from {
-    transform: translateX(100%);
-    opacity: 0;
+  .nav-link:hover {
+    color: var(--primary);
   }
-  to {
-    transform: translateX(0);
-    opacity: 1;
-  }
-}
 
-@keyframes zoomIn {
-  from {
-    transform: translate(-50%, -50%) scale(0.9);
-    opacity: 0;
+  .game-container {
+    display: flex;
+    height: 100%;
   }
-  to {
-    transform: translate(-50%, -50%) scale(1);
-    opacity: 1;
-  }
-}
 
-/* Responsive adjustments */
-@media (max-width: 768px) {
-  .map-wrapper {
-    height: 400px;
-  }
-  
-  .guess-info-panel,
-  .score-panel {
-    bottom: 10px;
-    right: 10px;
-    min-width: 180px;
-    padding: 0.75rem;
-  }
-  
-  .answer-panel {
-    min-width: 250px;
-    padding: 1rem;
-    margin: 0 1rem;
-  }
-  
-  .answer-title {
+  /* Buttons */
+  .btn {
+    padding: 0.75rem 1.5rem;
+    border: none;
+    border-radius: 9999px;
+    font-weight: bold;
     font-size: 1rem;
+    cursor: pointer;
+    transition: all 0.2s;
+    background: var(--bg-card);
+    color: var(--text-primary);
+    border: 1px solid var(--border);
   }
-  
-  .answer-score .highlight {
+
+  .btn-primary {
+    background: var(--primary);
+    color: white;
+    border: none;
+  }
+
+  .btn-primary:hover {
+    background: var(--primary-dark);
+    transform: scale(1.02);
+  }
+
+  .btn-large {
+    padding: 1rem 2rem;
+    font-size: 1.1rem;
+  }
+
+  /* Cards */
+  .card {
+    background: var(--bg-card);
+    border-radius: 1rem;
+    border: 1px solid var(--border);
+    padding: 1.5rem;
+  }
+
+  /* Game specific */
+  .game-image {
+    width: 100%;
+    max-width: 600px;
+    height: auto;
+    max-height: 400px;
+    object-fit: contain;
+    border-radius: 1rem;
+    margin: 1rem 0;
+    background: #0a0a0a;
+  }
+
+  .map-container {
+    width: 100%;
+    height: 500px;
+    border-radius: 1rem;
+    overflow: hidden;
+    border: 1px solid var(--border);
+    margin: 1rem 0;
+  }
+
+  .round-header {
+    font-size: 1.5rem;
+    font-weight: bold;
+    margin-bottom: 0.5rem;
+  }
+
+  .score-display {
     font-size: 1.25rem;
+    color: var(--primary);
+    font-weight: bold;
   }
-}
 
-#map {
-  cursor: crosshair;
-}
+  .answer-section {
+    margin-top: 1rem;
+    padding: 1rem;
+    background: rgba(34, 197, 94, 0.1);
+    border-radius: 0.75rem;
+  }
 
-.leaflet-default-icon-path {
-  background-image: url(https://unpkg.com/leaflet@1.7.1/dist/images/marker-icon.png);
-}
+  /* Hero section */
+  .hero {
+    text-align: center;
+    padding: 4rem 1rem;
+  }
+
+  .hero h1 {
+    font-size: 3rem;
+    margin-bottom: 1rem;
+    background: linear-gradient(135deg, #fff, #22c55e);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+
+  .feature-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 2rem;
+    margin: 3rem 0;
+    padding: 0 1rem;
+  }
+
+  .feature-card {
+    background: var(--bg-card);
+    padding: 1.5rem;
+    border-radius: 1rem;
+    text-align: center;
+    border: 1px solid var(--border);
+  }
+
+  /* Loading */
+  .loading {
+    text-align: center;
+    padding: 2rem;
+    color: var(--text-secondary);
+  }
+
+  /* Responsive */
+  @media (max-width: 768px) {
+    .navbar-content {
+      flex-direction: column;
+    }
+
+    .hero h1 {
+      font-size: 2rem;
+    }
+
+    .map-container {
+      height: 350px;
+    }
+
+    .game-image {
+      max-height: 250px;
+    }
+  }
+
+  /* Map Styles */
+  .map-wrapper {
+    position: relative;
+    width: 100%;
+    height: 500px;
+    border-radius: 0.75rem;
+    overflow: hidden;
+    background: #0a0a0a;
+  }
+
+  .map-container-leaflet {
+    width: 100%;
+    height: 100%;
+    z-index: 1;
+    cursor: crosshair;
+  }
+
+  /* Guess Info Panel (before submission) */
+  .guess-info-panel {
+    position: absolute;
+    bottom: 20px;
+    right: 20px;
+    background: rgba(0, 0, 0, 0.9);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(34, 197, 94, 0.3);
+    border-radius: 0.75rem;
+    padding: 1rem;
+    min-width: 200px;
+    z-index: 1000;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+  }
+
+  .guess-info-title {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: #22c55e;
+    margin-bottom: 0.5rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  .guess-info-detail {
+    font-size: 0.75rem;
+    font-family: 'Courier New', monospace;
+    color: #9ca3af;
+    margin-bottom: 0.75rem;
+    line-height: 1.4;
+  }
+
+  .btn-submit {
+    width: 100%;
+    background: linear-gradient(135deg, #22c55e, #16a34a);
+    color: white;
+    border: none;
+    padding: 0.5rem 1rem;
+    border-radius: 0.5rem;
+    font-weight: 600;
+    font-size: 0.875rem;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .btn-submit:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(34, 197, 94, 0.3);
+  }
+
+  .btn-submit:active {
+    transform: translateY(0);
+  }
+
+  /* Score Panel (after submission, before round ends) */
+  .score-panel {
+    position: absolute;
+    bottom: 20px;
+    right: 20px;
+    background: rgba(0, 0, 0, 0.9);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(34, 197, 94, 0.5);
+    border-radius: 0.75rem;
+    padding: 1rem;
+    min-width: 220px;
+    z-index: 1000;
+    animation: slideIn 0.3s ease-out;
+  }
+
+  .score-title {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: #22c55e;
+    margin-bottom: 0.5rem;
+  }
+
+  .score-detail {
+    font-size: 0.75rem;
+    color: #9ca3af;
+    margin-bottom: 0.25rem;
+  }
+
+  .score-value {
+    font-size: 1.25rem;
+    font-weight: bold;
+    color: #22c55e;
+    margin: 0.5rem 0;
+  }
+
+  .score-waiting {
+    font-size: 0.7rem;
+    color: #6b7280;
+    margin-top: 0.5rem;
+    font-style: italic;
+  }
+
+  /* Answer Panel (round complete) */
+  .answer-panel {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: rgba(0, 0, 0, 0.95);
+    backdrop-filter: blur(10px);
+    border: 2px solid #22c55e;
+    border-radius: 1rem;
+    padding: 1.5rem;
+    min-width: 300px;
+    max-width: 400px;
+    z-index: 1000;
+    text-align: center;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+    animation: zoomIn 0.3s ease-out;
+  }
+
+  .answer-title {
+    font-size: 1.25rem;
+    font-weight: bold;
+    color: #22c55e;
+    margin-bottom: 1rem;
+  }
+
+  .answer-location {
+    font-size: 1rem;
+    color: white;
+    margin-bottom: 0.75rem;
+    word-break: break-word;
+  }
+
+  .answer-score {
+    font-size: 1.125rem;
+    color: #9ca3af;
+    margin: 0.75rem 0;
+  }
+
+  .answer-score .highlight {
+    color: #22c55e;
+    font-size: 1.5rem;
+    font-weight: bold;
+  }
+
+  .answer-distance {
+    font-size: 0.875rem;
+    color: #6b7280;
+    margin-top: 0.5rem;
+  }
+
+  /* Custom Leaflet Marker Styles */
+  .answer-marker {
+    background: none;
+    border: none;
+    font-size: 2rem;
+    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.5));
+  }
+
+  /* Animations */
+  @keyframes slideIn {
+    from {
+      transform: translateX(100%);
+      opacity: 0;
+    }
+
+    to {
+      transform: translateX(0);
+      opacity: 1;
+    }
+  }
+
+  @keyframes zoomIn {
+    from {
+      transform: translate(-50%, -50%) scale(0.9);
+      opacity: 0;
+    }
+
+    to {
+      transform: translate(-50%, -50%) scale(1);
+      opacity: 1;
+    }
+  }
+
+  /* Responsive adjustments */
+  @media (max-width: 768px) {
+    .map-wrapper {
+      height: 400px;
+    }
+
+    .guess-info-panel,
+    .score-panel {
+      bottom: 10px;
+      right: 10px;
+      min-width: 180px;
+      padding: 0.75rem;
+    }
+
+    .answer-panel {
+      min-width: 250px;
+      padding: 1rem;
+      margin: 0 1rem;
+    }
+
+    .answer-title {
+      font-size: 1rem;
+    }
+
+    .answer-score .highlight {
+      font-size: 1.25rem;
+    }
+  }
+
+  #map {
+    cursor: crosshair;
+  }
+
+  .leaflet-default-icon-path {
+    background-image: url(https://unpkg.com/leaflet@1.7.1/dist/images/marker-icon.png);
+  }
