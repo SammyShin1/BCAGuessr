@@ -12,126 +12,237 @@ const Map = dynamic(() => import('../../components/Map'), {
   loading: () => <p className="loading">Loading map...</p>
 });
 
+const TOTAL_ROUNDS = 5;
+const ROUND_COMPLETION_STATE_KEY = 'bcaguessr_round_completion';
+
 export default function GamePage() {
   const router = useRouter();
   const [checkingAuth, setCheckingAuth] = useState(true);
+  const [sessionId, setSessionId] = useState(null);
   const [location, setLocation] = useState(null);
   const [round, setRound] = useState(1);
   const [totalScore, setTotalScore] = useState(0);
   const [lastScore, setLastScore] = useState(0);
   const [roundOver, setRoundOver] = useState(false);
   const [gameOver, setGameOver] = useState(false);
-  const [userGuess, setUserGuess] = useState(null); // Store guess coordinates and score
-  const TOTAL_ROUNDS = 5;
+  const [userGuess, setUserGuess] = useState(null);
+  const [usedLocationIds, setUsedLocationIds] = useState([]);
 
-  async function fetchRandomLocation() {
+  const saveRoundCompletionState = (sessionId, round, totalScore, lastScore, userGuess) => {
+    if (typeof window === 'undefined') return;
+    localStorage.setItem(ROUND_COMPLETION_STATE_KEY, JSON.stringify({
+      sessionId,
+      round,
+      totalScore,
+      lastScore,
+      userGuess,
+    }));
+  };
+
+  const loadRoundCompletionState = () => {
+    if (typeof window === 'undefined') return null;
+    const raw = localStorage.getItem(ROUND_COMPLETION_STATE_KEY);
+    if (!raw) return null;
+    try {
+      return JSON.parse(raw);
+    } catch {
+      return null;
+    }
+  };
+
+  const clearRoundCompletionState = () => {
+    if (typeof window === 'undefined') return;
+    localStorage.removeItem(ROUND_COMPLETION_STATE_KEY);
+  };
+
+  async function fetchRandomLocation(excludeIds = []) {
+    let query = supabase.from('locations').select('*');
+    if (excludeIds.length > 0) {
+      query = query.not('id', 'in', `(${excludeIds.join(',')})`);
+    }
+    const { data, error } = await query;
+    if (error) { console.error(error); return null; }
+    if (!data?.length) {
+      if (excludeIds.length === 0) return null;
+      const { data: allData, error: allError } = await supabase.from('locations').select('*');
+      if (allError) { console.error(allError); return null; }
+      if (!allData?.length) return null;
+      return allData[Math.floor(Math.random() * allData.length)];
+    }
+    return data[Math.floor(Math.random() * data.length)];
+  }
+
+  async function createSession(userId, firstLocation) {
     const { data, error } = await supabase
-      .from('locations')
-      .select('*, latitude, longitude');
-    if (error) console.error(error);
-    if (data && data.length > 0) {
-      const random = data[Math.floor(Math.random() * data.length)];
-      setLocation(random);
-    }
+      .from('game_sessions')
+      .insert({
+        user_id: userId,
+        round: 1,
+        total_score: 0,
+        current_location_id: firstLocation.id,
+        location_ids: [firstLocation.id],
+        status: 'active',
+        mode: 'normal',
+      })
+      .select()
+      .single();
+    if (error) { console.error('Error creating session:', error); return null; }
+    return data;
   }
 
-  async function saveScore(finalScore, mode = "normal") {
+  async function updateSession(id, updates) {
+    const { error } = await supabase
+      .from('game_sessions')
+      .update({ ...updates, updated_at: new Date().toISOString() })
+      .eq('id', id);
+    if (error) console.error('Error updating session:', error);
+  }
+
+  async function saveScore(finalScore, mode = 'normal') {
     const { data: userData, error: userError } = await supabase.auth.getUser();
-
-    if (userError || !userData.user) {
-      console.error("No logged-in user found:", userError);
-      return;
-  }
-
-  const { error } = await supabase.from("leaderboard").insert({
+    if (userError || !userData.user) { console.error('No logged-in user found:', userError); return; }
+    const { error } = await supabase.from('leaderboard').insert({
       user_id: userData.user.id,
       email: userData.user.email,
-      username: userData.user.email.split("@")[0],
+      username: userData.user.email.split('@')[0],
       score: finalScore,
-      mode: mode,
-      challenge_date:
-        mode === "daily" ? new Date().toISOString().split("T")[0] : null,
+      mode,
+      challenge_date: mode === 'daily' ? new Date().toISOString().split('T')[0] : null,
     });
-
-    if (error) {
-      console.error("Error saving score:", error);
-    }
-  }
-
-  async function saveScore(finalScore, mode = "normal") {
-    const { data: userData, error: userError } = await supabase.auth.getUser();
-
-    if (userError || !userData.user) {
-      console.error("No logged-in user found:", userError);
-      return;
-  }
-
-  const { error } = await supabase.from("leaderboard").insert({
-      user_id: userData.user.id,
-      email: userData.user.email,
-      username: userData.user.email.split("@")[0],
-      score: finalScore,
-      mode: mode,
-      challenge_date:
-        mode === "daily" ? new Date().toISOString().split("T")[0] : null,
-    });
-
-    if (error) {
-      console.error("Error saving score:", error);
-    }
+    if (error) console.error('Error saving score:', error);
   }
 
   function nextRound(score, guessLat, guessLng) {
+    const nextTotal = totalScore + score;
     setLastScore(score);
-    setTotalScore(prev => prev + score);
+    setTotalScore(nextTotal);
     setUserGuess({ lat: guessLat, lng: guessLng, score });
     setRoundOver(true);
+    saveRoundCompletionState(sessionId, round, nextTotal, score, { lat: guessLat, lng: guessLng, score });
   }
 
   async function continueGame() {
+    clearRoundCompletionState();
     setRoundOver(false);
+    const newTotal = totalScore;
 
     if (round >= TOTAL_ROUNDS) {
-      await saveScore(totalScore, "normal");
+      await saveScore(newTotal, 'normal');
+      await updateSession(sessionId, { status: 'complete', total_score: newTotal });
       setGameOver(true);
     } else {
-      setRound(prev => prev + 1);
-      fetchRandomLocation();
+      const newRound = round + 1;
+      const newLocation = await fetchRandomLocation(usedLocationIds);
+      if (!newLocation) return;
+
+      const newUsedIds = Array.from(new Set([...usedLocationIds, newLocation.id]));
+      setUsedLocationIds(newUsedIds);
+      setRound(newRound);
+      setTotalScore(newTotal);
+      setLocation(newLocation);
+      setUserGuess(null);
+
+      await updateSession(sessionId, {
+        round: newRound,
+        total_score: newTotal,
+        current_location_id: newLocation.id,
+        location_ids: newUsedIds,
+      });
     }
   }
 
-  
+  async function resetGame() {
+    const { data: userData } = await supabase.auth.getUser();
+    if (!userData?.user) return;
 
-  function resetGame() {
+    if (sessionId) {
+      await updateSession(sessionId, { status: 'complete' });
+    }
+    clearRoundCompletionState();
+
+    const firstLocation = await fetchRandomLocation([]);
+    if (!firstLocation) return;
+
+    const session = await createSession(userData.user.id, firstLocation);
+    if (!session) return;
+
+    setSessionId(session.id);
     setRound(1);
     setTotalScore(0);
+    setLastScore(0);
     setGameOver(false);
     setRoundOver(false);
     setUserGuess(null);
-    fetchRandomLocation();
+    setUsedLocationIds([firstLocation.id]);
+    setLocation(firstLocation);
   }
 
-
-    useEffect(() => {
-    async function checkUserAndLoadGame() {
+  useEffect(() => {
+    async function init() {
       const { data, error } = await supabase.auth.getUser();
 
-      if (error || !data.user) {
-        router.push('/login');
-        return;
-      }
-
+      if (error || !data.user) { router.push('/login'); return; }
       if (!data.user.email.endsWith('@bergen.org')) {
         await supabase.auth.signOut();
         router.push('/login');
         return;
       }
 
+      // Try to resume an existing active session
+      const { data: existingSession, error: sessionError } = await supabase
+        .from('game_sessions')
+        .select('*')
+        .eq('user_id', data.user.id)
+        .eq('status', 'active')
+        .maybeSingle();
+
+      if (sessionError) {
+        console.error('Error checking active session:', sessionError);
+      }
+
+      if (existingSession) {
+        const { data: locationData } = await supabase
+          .from('locations')
+          .select('*')
+          .eq('id', existingSession.current_location_id)
+          .single();
+
+        const completionState = loadRoundCompletionState();
+        const shouldRestoreCompletion = completionState && completionState.sessionId === existingSession.id && completionState.round === existingSession.round;
+        const restoredTotalScore = shouldRestoreCompletion ? completionState.totalScore : existingSession.total_score;
+
+        setSessionId(existingSession.id);
+        setRound(existingSession.round);
+        setTotalScore(restoredTotalScore);
+        setUsedLocationIds(existingSession.location_ids || []);
+        setLocation(locationData);
+
+        if (shouldRestoreCompletion) {
+          setRoundOver(true);
+          setLastScore(completionState.lastScore || 0);
+          setUserGuess(completionState.userGuess || null);
+        } else {
+          setRoundOver(false);
+          setLastScore(0);
+          setUserGuess(null);
+        }
+      } else {
+        // Start a fresh session
+        const firstLocation = await fetchRandomLocation([]);
+        if (!firstLocation) return;
+
+        const session = await createSession(data.user.id, firstLocation);
+        if (!session) return;
+
+        setSessionId(session.id);
+        setUsedLocationIds([firstLocation.id]);
+        setLocation(firstLocation);
+      }
+
       setCheckingAuth(false);
-      fetchRandomLocation();
     }
 
-    checkUserAndLoadGame();
+    init();
   }, [router]);
 
   if (checkingAuth) {
@@ -150,10 +261,10 @@ export default function GamePage() {
             Total: {totalScore} / {round * 5000}
           </p>
           <div className="map-container">
-            <Map 
-              showAnswer={true} 
-              location={location} 
-              userGuess={userGuess}  // Pass the guess to Map
+            <Map
+              showAnswer={true}
+              location={location}
+              userGuess={userGuess}
             />
           </div>
           <button onClick={continueGame} className="btn btn-primary" style={{ marginTop: '1rem' }}>
@@ -173,17 +284,9 @@ export default function GamePage() {
             Total Score: <span className="score-display">{totalScore}</span> / {TOTAL_ROUNDS * 5000}
           </p>
           <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center', marginTop: '2rem' }}>
-            <button onClick={resetGame} className="btn btn-primary">
-              Play Again
-            </button>
-
-            <Link href="/leaderboard">
-              <button className="btn">View Leaderboard</button>
-            </Link>
-
-            <Link href="/">
-              <button className="btn">Back to Home</button>
-            </Link>
+            <button onClick={resetGame} className="btn btn-primary">Play Again</button>
+            <Link href="/leaderboard"><button className="btn">View Leaderboard</button></Link>
+            <Link href="/"><button className="btn">Back to Home</button></Link>
           </div>
         </div>
       </div>
