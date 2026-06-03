@@ -24,8 +24,8 @@ export default function Map({ onGuess, location, showAnswer, userGuess }) {
 
   const calculateScore = (distanceKm) => {
     const distanceMeters = distanceKm * 1000;
-    if (distanceMeters <= 2) return 5000;
-    const score = Math.round(4999 * Math.exp(-(distanceMeters - 2) / 100));
+    if (distanceMeters <= 5) return 5000;
+    const score = Math.round(4999 * Math.exp(-(distanceMeters - 5) / 300));
     return Math.max(0, score);
   };
 
@@ -42,7 +42,7 @@ export default function Map({ onGuess, location, showAnswer, userGuess }) {
 
     const initMap = async () => {
       const L = await import('leaflet');
-      
+
       if (mapRef.current) {
         mapRef.current.remove();
         mapRef.current = null;
@@ -51,7 +51,15 @@ export default function Map({ onGuess, location, showAnswer, userGuess }) {
       const correctLat = location.latitude;
       const correctLng = location.longitude;
 
-      mapRef.current = L.map('map').setView([correctLat, correctLng], 18);
+      mapRef.current = L.map('map', {
+        maxBounds: [
+          [40.8990, -74.0380],
+          [40.9055, -74.0305],
+        ],
+        maxBoundsViscosity: 0.75,
+        minZoom: 18,
+        maxZoom: 22
+      }).setView([correctLat, correctLng], 18);
       mapRef.current.getContainer().style.cursor = 'crosshair';
 
       L.tileLayer('https://{s}.google.com/vt/lyrs=y&x={x}&y={y}&z={z}', {
@@ -68,7 +76,7 @@ export default function Map({ onGuess, location, showAnswer, userGuess }) {
           .addTo(mapRef.current)
           .bindPopup(`<b>Your Guess (Pending)</b><br>Lat: ${lat.toFixed(6)}<br>Lng: ${lng.toFixed(6)}<br><i>Click Submit to confirm</i>`)
           .openPopup();
-        guessMarkerRef.current.on('dragend', function() {
+        guessMarkerRef.current.on('dragend', function () {
           const pos = this.getLatLng();
           setTempGuess({ lat: pos.lat, lng: pos.lng });
           this.bindPopup(`<b>Your Guess (Pending)</b><br>Lat: ${pos.lat.toFixed(6)}<br>Lng: ${pos.lng.toFixed(6)}<br><i>Click Submit to confirm</i>`).openPopup();
@@ -133,7 +141,7 @@ export default function Map({ onGuess, location, showAnswer, userGuess }) {
         // If userGuess is provided from parent, use that
         let guessCoords = userGuess;
         if (!guessCoords && submittedGuess) guessCoords = submittedGuess;
-        
+
         if (guessCoords) {
           // Add guess marker (recreate it)
           if (guessMarkerRef.current) mapRef.current.removeLayer(guessMarkerRef.current);
@@ -141,11 +149,11 @@ export default function Map({ onGuess, location, showAnswer, userGuess }) {
             .addTo(mapRef.current)
             .bindPopup(`<b>Your Guess</b><br>Lat: ${guessCoords.lat.toFixed(6)}<br>Lng: ${guessCoords.lng.toFixed(6)}`)
             .openPopup();
-          
+
           // Draw line
           const latlngs = [[guessCoords.lat, guessCoords.lng], [correctLat, correctLng]];
-          lineRef.current = L.polyline(latlngs, { color: '#FFFFFF', weight: 3, opacity: 0.8}).addTo(mapRef.current);
-          
+          lineRef.current = L.polyline(latlngs, { color: '#FFFFFF', weight: 3, opacity: 0.8 }).addTo(mapRef.current);
+
           // Fit bounds to show both markers
           const bounds = L.latLngBounds([correctLat, correctLng], [guessCoords.lat, guessCoords.lng]);
           mapRef.current.fitBounds(bounds, { padding: [50, 50] });
@@ -172,7 +180,7 @@ export default function Map({ onGuess, location, showAnswer, userGuess }) {
   return (
     <div className="map-wrapper">
       <div id="map" className="map-container-leaflet"></div>
-      
+
       {tempGuess && !submittedGuess && !showAnswer && (
         <div className="guess-info-panel">
           <div className="guess-info-title">Pending Guess</div>
@@ -183,7 +191,7 @@ export default function Map({ onGuess, location, showAnswer, userGuess }) {
           <button onClick={handleSubmit} className="btn-submit">Submit Guess</button>
         </div>
       )}
-      
+
       {submittedGuess && !showAnswer && score !== null && (
         <div className="score-panel">
           <div className="score-title">✓ Guess Submitted!</div>
