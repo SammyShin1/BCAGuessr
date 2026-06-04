@@ -32,7 +32,7 @@ export default function SignupPage() {
       email: cleanedEmail,
       password: password,
       options: {
-        emailRedirectTo: "http://localhost:3000/login",
+        emailRedirectTo: `${window.location.origin}/login`,
       },
     });
 
