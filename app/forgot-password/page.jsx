@@ -1,34 +1,30 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { supabase } from "../../lib/supabase";
+import "../globals.css";
 
-export default function LoginPage() {
-  const router = useRouter();
-
+export default function ForgotPasswordPage() {
   const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
 
-  const handleLogin = async (event) => {
+  async function handleResetPassword(event) {
     event.preventDefault();
     setMessage("");
 
     const cleanedEmail = email.trim().toLowerCase();
 
     if (!cleanedEmail.endsWith("@bergen.org")) {
-      setMessage("You must use a @bergen.org email to log in.");
+      setMessage("You must use a @bergen.org email.");
       return;
     }
 
     setLoading(true);
 
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email: cleanedEmail,
-      password: password,
+    const { error } = await supabase.auth.resetPasswordForEmail(cleanedEmail, {
+      redirectTo: "http://localhost:3000/update-password",
     });
 
     setLoading(false);
@@ -38,16 +34,14 @@ export default function LoginPage() {
       return;
     }
 
-    console.log("Logged in user:", data.user);
-
-    router.push("/");
-  };
+    setMessage("Password reset email sent! Check your Bergen email.");
+  }
 
   return (
     <main style={{ maxWidth: "400px", margin: "80px auto", padding: "20px" }}>
-      <h1>Log In</h1>
+      <h1>Reset Password</h1>
 
-      <form onSubmit={handleLogin}>
+      <form onSubmit={handleResetPassword}>
         <label>Email</label>
         <input
           type="email"
@@ -63,34 +57,15 @@ export default function LoginPage() {
           }}
         />
 
-        <label>Password</label>
-        <input
-          type="password"
-          placeholder="Enter your password"
-          value={password}
-          onChange={(event) => setPassword(event.target.value)}
-          required
-          style={{
-            display: "block",
-            width: "100%",
-            marginBottom: "12px",
-            padding: "8px",
-          }}
-        />
-
         <button type="submit" disabled={loading}>
-          {loading ? "Logging in..." : "Log In"}
+          {loading ? "Sending..." : "Send Reset Email"}
         </button>
       </form>
 
       {message && <p>{message}</p>}
 
       <p>
-        Need an account? <a href="/signup">Sign up</a>
-      </p>
-
-      <p>
-        Forgot your password? <a href="/forgot-password">Reset it here</a>
+        Remembered your password? <Link href="/login">Log in</Link>
       </p>
     </main>
   );
