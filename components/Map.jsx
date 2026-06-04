@@ -127,7 +127,7 @@ export default function Map({ onGuess, location, showAnswer, userGuess }) {
         // Add answer marker
         answerMarkerRef.current = L.marker([correctLat, correctLng])
           .addTo(mapRef.current)
-          .bindPopup(`<b>✓ Correct Location</b><br>${location.title}<br>Lat: ${correctLat.toFixed(6)}<br>Lng: ${correctLng.toFixed(6)}`)
+          .bindPopup(`<b>✓ Correct Location</b>Lat: ${correctLat.toFixed(6)}<br>Lng: ${correctLng.toFixed(6)}`)
           .openPopup();
 
         // If userGuess is provided from parent, use that

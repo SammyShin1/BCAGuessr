@@ -87,10 +87,8 @@ export default function DailyPage() {
           {todayDate} • One new location each day
         </p>
         
-        <p style={{ fontSize: '1.25rem', marginBottom: '0.5rem' }}>"{location.title}"</p>
         <img
           src={location.image_url}
-          alt={location.title}
           className="game-image"
         />
         

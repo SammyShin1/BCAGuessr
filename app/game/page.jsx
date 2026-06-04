@@ -200,11 +200,9 @@ export default function GamePage() {
         <div className="round-header">
           Round {round}/{TOTAL_ROUNDS}
         </div>
-        <p style={{ fontSize: '1.25rem', marginBottom: '0.5rem' }}>"{location.title}"</p>
         <div className="game-container">
           <img
             src={location.image_url}
-            alt={location.title}
             className="game-image"
           />
           <div className="map-container">
