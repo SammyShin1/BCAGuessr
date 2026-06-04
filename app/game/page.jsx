@@ -15,6 +15,27 @@ const Map = dynamic(() => import('../../components/Map'), {
 const TOTAL_ROUNDS = 5;
 const ROUND_COMPLETION_STATE_KEY = 'bcaguessr_round_completion';
 
+function LeaveModal({ onStay, onLeave }) {
+  return (
+    <div style={{
+      position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)',
+      display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000
+    }}>
+      <div className="card" style={{ maxWidth: '420px', width: '90%', textAlign: 'center' }}>
+        <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>⚠️</div>
+        <h3 style={{ marginBottom: '0.5rem' }}>Leave this game?</h3>
+        <p style={{ color: '#9ca3af', marginBottom: '1.5rem' }}>
+          You have a game already in progress. Returning home will keep your session available to resume later.
+        </p>
+        <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center', flexWrap: 'wrap' }}>
+          <button onClick={onStay} className="btn btn-primary">Stay</button>
+          <button onClick={onLeave} className="btn">Return Home</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function GamePage() {
   const router = useRouter();
   const [checkingAuth, setCheckingAuth] = useState(true);
@@ -27,6 +48,7 @@ export default function GamePage() {
   const [gameOver, setGameOver] = useState(false);
   const [userGuess, setUserGuess] = useState(null);
   const [usedLocationIds, setUsedLocationIds] = useState([]);
+  const [showLeaveModal, setShowLeaveModal] = useState(false);
 
   const saveRoundCompletionState = (sessionId, round, totalScore, lastScore, userGuess) => {
     if (typeof window === 'undefined') return;
@@ -53,6 +75,19 @@ export default function GamePage() {
   const clearRoundCompletionState = () => {
     if (typeof window === 'undefined') return;
     localStorage.removeItem(ROUND_COMPLETION_STATE_KEY);
+  };
+
+  const handleReturnHome = () => {
+    setShowLeaveModal(true);
+  };
+
+  const handleLeaveConfirmed = () => {
+    setShowLeaveModal(false);
+    router.push('/');
+  };
+
+  const handleStay = () => {
+    setShowLeaveModal(false);
   };
 
   async function fetchRandomLocation(excludeIds = []) {
@@ -245,77 +280,106 @@ export default function GamePage() {
     init();
   }, [router]);
 
+  const leaveModal = showLeaveModal ? (
+    <LeaveModal onStay={handleStay} onLeave={handleLeaveConfirmed} />
+  ) : null;
+
   if (checkingAuth) {
-    return <div className="loading">Checking login...</div>;
+    return (
+      <>
+        {leaveModal}
+        <div className="loading">Checking login...</div>
+      </>
+    );
   }
 
   if (roundOver) {
     return (
-      <div style={{ textAlign: 'center', padding: '2rem 1rem' }}>
-        <div className="card" style={{ maxWidth: '800px', margin: '0 auto' }}>
-          <h2 style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>Round {round} Complete!</h2>
-          <p style={{ fontSize: '1.5rem', margin: '0.5rem 0' }}>
-            Score: <span className="score-display">{lastScore}</span> / 5000
-          </p>
-          <p style={{ color: '#9ca3af', marginBottom: '1rem' }}>
-            Total: {totalScore} / {round * 5000}
-          </p>
-          <div className="map-container">
-            <Map
-              showAnswer={true}
-              location={location}
-              userGuess={userGuess}
-            />
+      <>
+        {leaveModal}
+        <div style={{ textAlign: 'center', padding: '2rem 1rem' }}>
+          <div className="card" style={{ maxWidth: '800px', margin: '0 auto' }}>
+            <h2 style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>Round {round} Complete!</h2>
+            <p style={{ fontSize: '1.5rem', margin: '0.5rem 0' }}>
+              Score: <span className="score-display">{lastScore}</span> / 5000
+            </p>
+            <p style={{ color: '#9ca3af', marginBottom: '1rem' }}>
+              Total: {totalScore} / {round * 5000}
+            </p>
+            <div className="map-container">
+              <Map
+                showAnswer={true}
+                location={location}
+                userGuess={userGuess}
+              />
+            </div>
+            <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center', marginTop: '1rem', flexWrap: 'wrap' }}>
+              <button onClick={continueGame} className="btn btn-primary">
+                {round >= TOTAL_ROUNDS ? 'See Final Score' : 'Next Round'}
+              </button>
+              <button onClick={handleReturnHome} className="btn">Return Home</button>
+            </div>
           </div>
-          <button onClick={continueGame} className="btn btn-primary" style={{ marginTop: '1rem' }}>
-            {round >= TOTAL_ROUNDS ? 'See Final Score' : 'Next Round'}
-          </button>
         </div>
-      </div>
+      </>
     );
   }
 
   if (gameOver) {
     return (
-      <div style={{ textAlign: 'center', padding: '2rem 1rem' }}>
-        <div className="card" style={{ maxWidth: '600px', margin: '0 auto' }}>
-          <h1 style={{ fontSize: '3rem', marginBottom: '1rem' }}>Game Over!</h1>
-          <p style={{ fontSize: '1.5rem', margin: '1rem 0' }}>
-            Total Score: <span className="score-display">{totalScore}</span> / {TOTAL_ROUNDS * 5000}
-          </p>
-          <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center', marginTop: '2rem' }}>
-            <button onClick={resetGame} className="btn btn-primary">Play Again</button>
-            <Link href="/leaderboard"><button className="btn">View Leaderboard</button></Link>
-            <Link href="/"><button className="btn">Back to Home</button></Link>
+      <>
+        {leaveModal}
+        <div style={{ textAlign: 'center', padding: '2rem 1rem' }}>
+          <div className="card" style={{ maxWidth: '600px', margin: '0 auto' }}>
+            <h1 style={{ fontSize: '3rem', marginBottom: '1rem' }}>Game Over!</h1>
+            <p style={{ fontSize: '1.5rem', margin: '1rem 0' }}>
+              Total Score: <span className="score-display">{totalScore}</span> / {TOTAL_ROUNDS * 5000}
+            </p>
+            <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center', marginTop: '2rem' }}>
+              <button onClick={resetGame} className="btn btn-primary">Play Again</button>
+              <Link href="/leaderboard"><button className="btn">View Leaderboard</button></Link>
+              <Link href="/"><button className="btn">Back to Home</button></Link>
+            </div>
           </div>
         </div>
-      </div>
+      </>
     );
   }
 
   if (!location) {
-    return <div className="loading">Loading game...</div>;
+    return (
+      <>
+        {leaveModal}
+        <div className="loading">Loading game...</div>
+      </>
+    );
   }
 
   return (
-    <div style={{ padding: '1rem 0' }}>
-      <div className="card">
-        <div className="round-header">
-          Round {round}/{TOTAL_ROUNDS}
-        </div>
-        <div className="game-container">
-          <img
-            src={location.image_url}
-            className="game-image"
-          />
-          <div className="map-container">
-            <Map onGuess={nextRound} location={location} />
+    <>
+      {leaveModal}
+      <div style={{ padding: '1rem 0' }}>
+        <div className="card">
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '1rem', marginBottom: '1rem' }}>
+            <div className="round-header">
+              Round {round}/{TOTAL_ROUNDS}
+            </div>
+            <button onClick={handleReturnHome} className="btn">Return Home</button>
           </div>
+          <div className="game-container">
+            <img
+              src={location.image_url}
+              className="game-image"
+            />
+            <div className="map-container">
+              <Map onGuess={nextRound} location={location} />
+            </div>
+          </div>
+          <p style={{ color: '#9ca3af', fontSize: '0.875rem', marginTop: '1rem' }}>
+            Click on the map to place your marker, then click Submit. Score is based on distance.
+          </p>
         </div>
-        <p style={{ color: '#9ca3af', fontSize: '0.875rem', marginTop: '1rem' }}>
-          Click on the map to place your marker, then click Submit. Score is based on distance.
-        </p>
       </div>
-    </div>
+    </>
   );
 }
