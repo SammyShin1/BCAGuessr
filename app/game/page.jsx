@@ -108,6 +108,15 @@ export default function GamePage() {
   }
 
   async function createSession(userId, firstLocation) {
+    const { data: existing } = await supabase
+      .from('game_sessions')
+      .select('*')
+      .eq('user_id', userId)
+      .eq('status', 'active')
+      .maybeSingle();
+
+    if (existing) return existing;
+
     const { data, error } = await supabase
       .from('game_sessions')
       .insert({
@@ -121,7 +130,20 @@ export default function GamePage() {
       })
       .select()
       .single();
-    if (error) { console.error('Error creating session:', error); return null; }
+
+    if (error) {
+      if (error.code === '23505') {
+        const { data: raceWinner } = await supabase
+          .from('game_sessions')
+          .select('*')
+          .eq('user_id', userId)
+          .eq('status', 'active')
+          .single();
+        return raceWinner;
+      }
+      console.error('Error creating session:', error);
+      return null;
+    }
     return data;
   }
 

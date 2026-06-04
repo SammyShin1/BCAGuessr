@@ -25,7 +25,8 @@ export default function Map({ onGuess, location, showAnswer, userGuess }) {
   const calculateScore = (distanceKm) => {
     const distanceMeters = distanceKm * 1000;
     if (distanceMeters <= 5) return 5000;
-    const score = Math.round(4999 * Math.exp(-(distanceMeters - 5) / 300));
+    const d = distanceMeters - 5;
+    const score = Math.round(4999 * Math.exp(-(d * d) / 5000));
     return Math.max(0, score);
   };
 
