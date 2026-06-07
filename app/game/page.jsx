@@ -48,6 +48,7 @@ export default function GamePage() {
   const [gameOver, setGameOver] = useState(false);
   const [userGuess, setUserGuess] = useState(null);
   const [usedLocationIds, setUsedLocationIds] = useState([]);
+  const [preloadedLocations, setPreloadedLocations] = useState([]);
   const [showLeaveModal, setShowLeaveModal] = useState(false);
 
   const saveRoundCompletionState = (sessionId, round, totalScore, lastScore, userGuess) => {
@@ -90,21 +91,30 @@ export default function GamePage() {
     setShowLeaveModal(false);
   };
 
-  async function fetchRandomLocation(excludeIds = []) {
-    let query = supabase.from('locations').select('*');
-    if (excludeIds.length > 0) {
-      query = query.not('id', 'in', `(${excludeIds.join(',')})`);
+  async function fetchUniqueLocations(count = 5, excludeIds = []) {
+    const { data, error } = await supabase.from('locations').select('*');
+    if (error) { console.error('fetchUniqueLocations error', error); return [] }
+    let candidates = data || [];
+    if (excludeIds.length) {
+      const excludeSet = new Set(excludeIds);
+      candidates = candidates.filter((c) => !excludeSet.has(c.id));
     }
-    const { data, error } = await query;
-    if (error) { console.error(error); return null; }
-    if (!data?.length) {
-      if (excludeIds.length === 0) return null;
-      const { data: allData, error: allError } = await supabase.from('locations').select('*');
-      if (allError) { console.error(allError); return null; }
-      if (!allData?.length) return null;
-      return allData[Math.floor(Math.random() * allData.length)];
+
+    for (let i = candidates.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [candidates[i], candidates[j]] = [candidates[j], candidates[i]];
     }
-    return data[Math.floor(Math.random() * data.length)];
+    return candidates.slice(0, count);
+  }
+
+  function preloadImages(locations = []) {
+    return Promise.all(locations.map((loc) => new Promise((res) => {
+      if (!loc?.image_url) return res();
+      const img = new Image();
+      img.onload = () => res();
+      img.onerror = () => res();
+      img.src = loc.image_url;
+    })));
   }
 
   async function createSession(userId, firstLocation) {
@@ -189,8 +199,14 @@ export default function GamePage() {
       setGameOver(true);
     } else {
       const newRound = round + 1;
-      const newLocation = await fetchRandomLocation(usedLocationIds);
-      if (!newLocation) return;
+      let newLocation = null;
+      if (preloadedLocations && preloadedLocations.length >= newRound) {
+        newLocation = preloadedLocations[newRound - 1];
+      }
+      if (!newLocation) {
+        console.error('No preloaded location available for round', newRound);
+        return;
+      }
 
       const newUsedIds = Array.from(new Set([...usedLocationIds, newLocation.id]));
       setUsedLocationIds(newUsedIds);
@@ -217,20 +233,23 @@ export default function GamePage() {
     }
     clearRoundCompletionState();
 
-    const firstLocation = await fetchRandomLocation([]);
-    if (!firstLocation) return;
+    const preloaded = await fetchUniqueLocations(TOTAL_ROUNDS, []);
+    if (!preloaded || preloaded.length === 0) return;
+    await preloadImages(preloaded);
 
+    const firstLocation = preloaded[0];
     const session = await createSession(userData.user.id, firstLocation);
     if (!session) return;
 
     setSessionId(session.id);
+    setPreloadedLocations(preloaded);
     setRound(1);
     setTotalScore(0);
     setLastScore(0);
     setGameOver(false);
     setRoundOver(false);
     setUserGuess(null);
-    setUsedLocationIds([firstLocation.id]);
+    setUsedLocationIds(preloaded.map((p) => p.id));
     setLocation(firstLocation);
   }
 
@@ -245,7 +264,6 @@ export default function GamePage() {
         return;
       }
 
-      // Try to resume an existing active session
       const { data: existingSession, error: sessionError } = await supabase
         .from('game_sessions')
         .select('*')
@@ -271,7 +289,14 @@ export default function GamePage() {
         setSessionId(existingSession.id);
         setRound(existingSession.round);
         setTotalScore(restoredTotalScore);
-        setUsedLocationIds(existingSession.location_ids || []);
+
+        const existingIds = existingSession.location_ids || [];
+        const needed = Math.max(0, TOTAL_ROUNDS - existingIds.length);
+        const extras = await fetchUniqueLocations(needed, existingIds);
+        const preloaded = [locationData, ...extras];
+        await preloadImages(preloaded);
+        setPreloadedLocations(preloaded);
+        setUsedLocationIds(preloaded.map((p) => p.id));
         setLocation(locationData);
 
         if (shouldRestoreCompletion) {
@@ -284,15 +309,18 @@ export default function GamePage() {
           setUserGuess(null);
         }
       } else {
-        // Start a fresh session
-        const firstLocation = await fetchRandomLocation([]);
-        if (!firstLocation) return;
 
+        const preloaded = await fetchUniqueLocations(TOTAL_ROUNDS, []);
+        if (!preloaded || preloaded.length === 0) return;
+        await preloadImages(preloaded);
+
+        const firstLocation = preloaded[0];
         const session = await createSession(data.user.id, firstLocation);
         if (!session) return;
 
         setSessionId(session.id);
-        setUsedLocationIds([firstLocation.id]);
+        setPreloadedLocations(preloaded);
+        setUsedLocationIds(preloaded.map((p) => p.id));
         setLocation(firstLocation);
       }
 
