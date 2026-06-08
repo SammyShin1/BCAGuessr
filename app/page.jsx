@@ -14,17 +14,13 @@ const ADMIN_EMAILS = new Set([
 
 function ContinueModal({ onContinue, onNewGame }) {
   return (
-    <div style={{
-      position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)',
-      display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000
-    }}>
-      <div className="feature-card" style={{ maxWidth: '400px', width: '90%', textAlign: 'center' }}>
-        <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>🎮</div>
-        <h3 style={{ marginBottom: '0.5rem' }}>Resume Game?</h3>
-        <p style={{ color: '#9ca3af', marginBottom: '1.5rem' }}>
+    <div className="modal-backdrop">
+      <div className="modal-dialog card">
+        <h3>Resume Game?</h3>
+        <p className="modal-copy">
           You have an unfinished game in progress.
         </p>
-        <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center' }}>
+        <div className="modal-actions">
           <button onClick={onContinue} className="btn btn-primary">Continue</button>
           <button onClick={onNewGame} className="btn">New Game</button>
         </div>
@@ -118,20 +114,27 @@ export default function HomePage() {
         />
       )}
 
-      <div className="hero">
-        <h1>BCAGuessr</h1>
-        <p style={{ fontSize: "1.25rem", color: "#9ca3af", marginBottom: "2rem" }}>
-          Test your BCA knowledge! Guess locations based on images.
-        </p>
+      <section className="hero">
+        <div className="hero-content">
+          <div className="hero-kicker">Bergen County Academies</div>
+          <h1>BCAGuessr</h1>
+          <p className="hero-copy">
+            Place each photo on the BCA map and see how well you know the building.
+          </p>
 
-        <button onClick={handleStartPlaying} className="btn btn-primary btn-large">
-          Start Playing
-        </button>
+          <div className="home-actions">
+            <button onClick={handleStartPlaying} className="btn btn-primary btn-large">
+              Start Playing
+            </button>
+            <button onClick={handleDailyChallenge} className="btn btn-large">
+              Daily Challenge
+            </button>
+          </div>
 
-        <div style={{ marginTop: "1rem", display: "flex", gap: "1rem", justifyContent: "center", alignItems: "center" }}>
+          <div className="user-strip">
           {user ? (
             <>
-              <span style={{ color: "#fff", fontWeight: 600 }}>
+              <span>
                 Logged in as: {user.email || user.user_metadata?.full_name || "User"}
               </span>
               {ADMIN_EMAILS.has(user.email?.toLowerCase()) && (
@@ -151,40 +154,41 @@ export default function HomePage() {
               </Link>
             </>
           )}
+          </div>
         </div>
-      </div>
+      </section>
 
       <div className="feature-grid">
         <div className="feature-card">
-          <div style={{ fontSize: "3rem", marginBottom: "1rem" }}>🌍</div>
+          <span className="feature-index">01</span>
           <h3>Classic Game</h3>
-          <p style={{ color: "#9ca3af" }}>
+          <p>
             5 rounds of location guessing. Score up to 5000 points per round!
           </p>
-          <button onClick={handleStartPlaying} className="btn" style={{ marginTop: "1rem" }}>
+          <button onClick={handleStartPlaying} className="btn">
             Play Now
           </button>
         </div>
 
         <div className="feature-card">
-          <div style={{ fontSize: "3rem", marginBottom: "1rem" }}>⭐</div>
+          <span className="feature-index">02</span>
           <h3>Daily Challenge</h3>
-          <p style={{ color: "#9ca3af" }}>
+          <p>
             One new location every day. Compete with yourself!
           </p>
-          <button onClick={handleDailyChallenge} className="btn" style={{ marginTop: "1rem" }}>
+          <button onClick={handleDailyChallenge} className="btn">
             Daily Challenge
           </button>
         </div>
 
         <div className="feature-card">
-          <div style={{ fontSize: "3rem", marginBottom: "1rem" }}>🏆</div>
+          <span className="feature-index">03</span>
           <h3>Leaderboard</h3>
-          <p style={{ color: "#9ca3af" }}>
+          <p>
             Compete with other players and view top scores.
           </p>
           <Link href="/leaderboard">
-            <button className="btn" style={{ marginTop: "1rem" }}>
+            <button className="btn">
               View Leaderboard
             </button>
           </Link>

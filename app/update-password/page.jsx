@@ -28,24 +28,29 @@ export default function UpdatePasswordPage() {
   }
 
   return (
-    <main>
-      <h1>Update Password</h1>
+    <main className="auth-page">
+      <div className="auth-card">
+        <h1>Update Password</h1>
 
-      <form onSubmit={handleUpdatePassword}>
-        <input
-          type="password"
-          placeholder="Enter new password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          required
-        />
+        <form className="auth-form" onSubmit={handleUpdatePassword}>
+          <div className="form-row">
+            <label>New password</label>
+            <input
+              type="password"
+              placeholder="Enter new password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+            />
+          </div>
 
-        <button type="submit" disabled={loading}>
-          {loading ? 'Updating...' : 'Update Password'}
-        </button>
-      </form>
+          <button className="btn btn-primary" type="submit" disabled={loading}>
+            {loading ? 'Updating...' : 'Update Password'}
+          </button>
+        </form>
 
-      {message && <p>{message}</p>}
+        {message && <p className="form-message">{message}</p>}
+      </div>
     </main>
   )
 }

@@ -38,35 +38,33 @@ export default function ForgotPasswordPage() {
   }
 
   return (
-    <main style={{ maxWidth: "400px", margin: "80px auto", padding: "20px" }}>
-      <h1>Reset Password</h1>
+    <main className="auth-page">
+      <div className="auth-card">
+        <h1>Reset Password</h1>
 
-      <form onSubmit={handleResetPassword}>
-        <label>Email</label>
-        <input
-          type="email"
-          placeholder="yourname@bergen.org"
-          value={email}
-          onChange={(event) => setEmail(event.target.value)}
-          required
-          style={{
-            display: "block",
-            width: "100%",
-            marginBottom: "12px",
-            padding: "8px",
-          }}
-        />
+        <form className="auth-form" onSubmit={handleResetPassword}>
+          <div className="form-row">
+            <label>Email</label>
+            <input
+              type="email"
+              placeholder="yourname@bergen.org"
+              value={email}
+              onChange={(event) => setEmail(event.target.value)}
+              required
+            />
+          </div>
 
-        <button type="submit" disabled={loading}>
-          {loading ? "Sending..." : "Send Reset Email"}
-        </button>
-      </form>
+          <button className="btn btn-primary" type="submit" disabled={loading}>
+            {loading ? "Sending..." : "Send Reset Email"}
+          </button>
+        </form>
 
-      {message && <p>{message}</p>}
+        {message && <p className="form-message">{message}</p>}
 
-      <p>
-        Remembered your password? <Link href="/login">Log in</Link>
-      </p>
+        <p className="form-links">
+          Remembered your password? <Link href="/login">Log in</Link>
+        </p>
+      </div>
     </main>
   );
 }

@@ -17,17 +17,13 @@ const ROUND_COMPLETION_STATE_KEY = 'bcaguessr_round_completion';
 
 function LeaveModal({ onStay, onLeave }) {
   return (
-    <div style={{
-      position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)',
-      display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000
-    }}>
-      <div className="card" style={{ maxWidth: '420px', width: '90%', textAlign: 'center' }}>
-        <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>⚠️</div>
-        <h3 style={{ marginBottom: '0.5rem' }}>Leave this game?</h3>
-        <p style={{ color: '#9ca3af', marginBottom: '1.5rem' }}>
+    <div className="modal-backdrop">
+      <div className="modal-dialog card">
+        <h3>Leave this game?</h3>
+        <p className="modal-copy">
           You have a game already in progress. Returning home will keep your session available to resume later.
         </p>
-        <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center', flexWrap: 'wrap' }}>
+        <div className="modal-actions">
           <button onClick={onStay} className="btn btn-primary">Stay</button>
           <button onClick={onLeave} className="btn">Return Home</button>
         </div>
@@ -420,6 +416,7 @@ export default function GamePage() {
             <img
               src={location.image_url}
               className="game-image"
+              alt="BCA location challenge"
             />
             <div className="map-container">
               <Map onGuess={nextRound} location={location} />

@@ -51,50 +51,44 @@ export default function SignupPage() {
   };
 
   return (
-    <main style={{ maxWidth: "400px", margin: "80px auto", padding: "20px" }}>
-      <h1>Sign Up</h1>
+    <main className="auth-page">
+      <div className="auth-card">
+        <h1>Sign Up</h1>
 
-      <form onSubmit={handleSignup}>
-        <label>Email</label>
-        <input
-          type="email"
-          placeholder="yourname@bergen.org"
-          value={email}
-          onChange={(event) => setEmail(event.target.value)}
-          required
-          style={{
-            display: "block",
-            width: "100%",
-            marginBottom: "12px",
-            padding: "8px",
-          }}
-        />
+        <form className="auth-form" onSubmit={handleSignup}>
+          <div className="form-row">
+            <label>Email</label>
+            <input
+              type="email"
+              placeholder="yourname@bergen.org"
+              value={email}
+              onChange={(event) => setEmail(event.target.value)}
+              required
+            />
+          </div>
 
-        <label>Password</label>
-        <input
-          type="password"
-          placeholder="Create a password"
-          value={password}
-          onChange={(event) => setPassword(event.target.value)}
-          required
-          style={{
-            display: "block",
-            width: "100%",
-            marginBottom: "12px",
-            padding: "8px",
-          }}
-        />
+          <div className="form-row">
+            <label>Password</label>
+            <input
+              type="password"
+              placeholder="Create a password"
+              value={password}
+              onChange={(event) => setPassword(event.target.value)}
+              required
+            />
+          </div>
 
-        <button type="submit" disabled={loading}>
-          {loading ? "Signing up..." : "Sign Up"}
-        </button>
-      </form>
+          <button className="btn btn-primary" type="submit" disabled={loading}>
+            {loading ? "Signing up..." : "Sign Up"}
+          </button>
+        </form>
 
-      {message && <p>{message}</p>}
+        {message && <p className="form-message">{message}</p>}
 
-      <p>
-        Already have an account? <a href="/login">Log in</a>
-      </p>
+        <p className="form-links">
+          Already have an account? <a href="/login">Log in</a>
+        </p>
+      </div>
     </main>
   );
 }
