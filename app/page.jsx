@@ -6,6 +6,12 @@ import { useState, useEffect } from "react";
 import { supabase } from "../lib/supabase";
 import "./globals.css";
 
+const ADMIN_EMAILS = new Set([
+  "jerche28@bergen.org",
+  "samshi28@bergen.org",
+  "sambas28@bergen.org",
+]);
+
 function ContinueModal({ onContinue, onNewGame }) {
   return (
     <div style={{
@@ -128,6 +134,11 @@ export default function HomePage() {
               <span style={{ color: "#fff", fontWeight: 600 }}>
                 Logged in as: {user.email || user.user_metadata?.full_name || "User"}
               </span>
+              {ADMIN_EMAILS.has(user.email?.toLowerCase()) && (
+                <Link href="/admin">
+                  <button className="btn">Admin</button>
+                </Link>
+              )}
               <button onClick={handleLogout} className="btn">Log Out</button>
             </>
           ) : (
