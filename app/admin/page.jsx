@@ -32,7 +32,6 @@ function normalizeLocation(location) {
     ...location,
     difficulty: location?.difficulty ?? '',
     level: location?.level ?? '',
-    needs_readjustment: Boolean(location?.needs_readjustment),
   };
 }
 
@@ -129,7 +128,6 @@ export default function AdminPage() {
       ...current,
       latitude: nextCoords.latitude,
       longitude: nextCoords.longitude,
-      needs_readjustment: false,
     }));
   }, []);
 
@@ -164,15 +162,12 @@ export default function AdminPage() {
       level,
       latitude,
       longitude,
-      needs_readjustment: Boolean(draft.needs_readjustment),
     };
 
-    const { data, error } = await supabase
+    const { error } = await supabase
       .from('locations')
       .update(updates)
-      .eq('id', draft.id)
-      .select()
-      .single();
+      .eq('id', draft.id);
 
     setSaving(false);
 
@@ -181,12 +176,15 @@ export default function AdminPage() {
       return;
     }
 
-    const saved = normalizeLocation(data);
+    const saved = normalizeLocation({
+      ...draft,
+      ...updates,
+    });
     setLocations((current) => current.map((location) => (
       location.id === saved.id ? saved : location
     )));
     setDraft(saved);
-    setReadjustMode(Boolean(saved.needs_readjustment));
+    setReadjustMode(false);
     setMessage('Saved.');
   };
 
@@ -244,7 +242,7 @@ export default function AdminPage() {
                   const nextLocation = normalizeLocation(location);
                   setSelectedId(nextLocation.id);
                   setDraft(nextLocation);
-                  setReadjustMode(Boolean(nextLocation.needs_readjustment));
+                  setReadjustMode(false);
                   setMessage('');
                 }}
               >
@@ -254,7 +252,6 @@ export default function AdminPage() {
                   <small>
                     Floor {location.level || 'unset'} · Difficulty {location.difficulty || 'unset'}
                   </small>
-                  {location.needs_readjustment && <em>Needs readjustment</em>}
                 </span>
               </button>
             ))}
@@ -277,13 +274,9 @@ export default function AdminPage() {
               <button
                 className={`btn ${readjustMode ? 'btn-primary' : ''}`}
                 type="button"
-                onClick={() => {
-                  const nextValue = !readjustMode;
-                  setReadjustMode(nextValue);
-                  handleDraftChange('needs_readjustment', nextValue);
-                }}
+                onClick={() => setReadjustMode((current) => !current)}
               >
-                {readjustMode ? 'Readjusting' : 'Mark for Readjustment'}
+                {readjustMode ? 'Done Readjusting' : 'Readjust Location'}
               </button>
             </div>
 
@@ -336,18 +329,6 @@ export default function AdminPage() {
                 />
               </label>
             </div>
-
-            <label className="admin-toggle">
-              <input
-                type="checkbox"
-                checked={Boolean(draft.needs_readjustment)}
-                onChange={(event) => {
-                  handleDraftChange('needs_readjustment', event.target.checked);
-                  setReadjustMode(event.target.checked);
-                }}
-              />
-              <span>This image needs location readjustment</span>
-            </label>
 
             <AdminLocationMap
               latitude={Number(draft.latitude)}
