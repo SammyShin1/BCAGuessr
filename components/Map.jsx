@@ -74,12 +74,12 @@ export default function Map({ onGuess, location, showAnswer, userGuess }) {
         if (guessMarkerRef.current) mapRef.current.removeLayer(guessMarkerRef.current);
         guessMarkerRef.current = L.marker([lat, lng], { draggable: true })
           .addTo(mapRef.current)
-          .bindPopup(`<b>Your Guess (Pending)</b><br>Lat: ${lat.toFixed(6)}<br>Lng: ${lng.toFixed(6)}<br><i>Click Submit to confirm</i>`)
+          .bindPopup(`Your Guess`)
           .openPopup();
         guessMarkerRef.current.on('dragend', function () {
           const pos = this.getLatLng();
           setTempGuess({ lat: pos.lat, lng: pos.lng });
-          this.bindPopup(`<b>Your Guess (Pending)</b><br>Lat: ${pos.lat.toFixed(6)}<br>Lng: ${pos.lng.toFixed(6)}<br><i>Click Submit to confirm</i>`).openPopup();
+          this.bindPopup(`Your Guess`).openPopup();
         });
         setTempGuess({ lat, lng });
       });
@@ -135,8 +135,9 @@ export default function Map({ onGuess, location, showAnswer, userGuess }) {
         // Add answer marker
         answerMarkerRef.current = L.marker([correctLat, correctLng])
           .addTo(mapRef.current)
-          .bindPopup(`<b>✓ Correct Location</b>Lat: ${correctLat.toFixed(6)}<br>Lng: ${correctLng.toFixed(6)}`)
+          .bindPopup(`<b>Correct Location</b>`)
           .openPopup();
+        answerMarkerRef.current._icon.style.filter = "hue-rotate(-100deg)";
 
         // If userGuess is provided from parent, use that
         let guessCoords = userGuess;
