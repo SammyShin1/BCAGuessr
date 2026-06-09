@@ -43,8 +43,13 @@ export default function LeaderboardPage() {
         .from("leaderboard")
         .select("*")
         .eq("mode", mode)
-        .order("score", { ascending: false })
-        .limit(20);
+        .order("score", { ascending: false });
+
+      if (mode === "daily") {
+        query = query.order("created_at", { ascending: true });
+      }
+
+      query = query.limit(20);
 
       const startDate = getStartDate();
 
@@ -141,6 +146,7 @@ export default function LeaderboardPage() {
                 <th>Player</th>
                 <th>Score</th>
                 <th>Date</th>
+                {mode === "daily" && <th>Time</th>}
               </tr>
             </thead>
 
@@ -153,6 +159,11 @@ export default function LeaderboardPage() {
                   <td>
                     {new Date(entry.created_at).toLocaleDateString()}
                   </td>
+                  {mode === "daily" && (
+                    <td>
+                      {new Date(entry.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    </td>
+                  )}
                 </tr>
               ))}
             </tbody>

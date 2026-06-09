@@ -17,6 +17,7 @@ export default function DailyPage() {
   const [hasGuessed, setHasGuessed] = useState(false);
   const [loading, setLoading] = useState(true);
   const [todayDate, setTodayDate] = useState('');
+  const [message, setMessage] = useState('');
 
   // Get daily location based on date
   const getDailyLocation = async () => {
@@ -26,12 +27,12 @@ export default function DailyPage() {
       setLoading(false);
       return;
     }
-    
+
     if (data && data.length > 0) {
       // Use date to determine consistent location for all users
       const today = new Date().toISOString().split('T')[0];
       setTodayDate(today);
-      
+
       // Simple hash of today's date to pick a location
       let hash = 0;
       for (let i = 0; i < today.length; i++) {
@@ -41,7 +42,7 @@ export default function DailyPage() {
       const dailyIndex = Math.abs(hash) % data.length;
       const dailyLocation = data[dailyIndex];
       setLocation(dailyLocation);
-      
+
       // Check if user already guessed today
       const stored = localStorage.getItem('bcaguessr_daily');
       if (stored) {
@@ -55,7 +56,38 @@ export default function DailyPage() {
     setLoading(false);
   };
 
-  const handleGuess = (guessScore) => {
+  const saveDailyScore = async (guessScore) => {
+    setMessage('');
+    const { data: userData, error: userError } = await supabase.auth.getUser();
+    if (userError || !userData?.user) {
+      console.warn('Daily score not saved to leaderboard: no logged-in user.');
+      setMessage('Score saved locally. Log in to appear on the leaderboard.');
+      return;
+    }
+
+    const username = userData.user.email?.split('@')[0] || 'Player';
+    const email = userData.user.email || null;
+    const userId = userData.user.id;
+
+    const { error } = await supabase.from('leaderboard').insert({
+      user_id: userId,
+      email,
+      username,
+      score: guessScore,
+      mode: 'daily',
+      challenge_date: todayDate,
+    });
+
+    if (error) {
+      console.error('Error saving daily leaderboard score:', error);
+      setMessage('Score saved locally, but leaderboard save failed.');
+      return;
+    }
+
+    setMessage('Score saved to daily leaderboard.');
+  };
+
+  const handleGuess = async (guessScore) => {
     if (!hasGuessed) {
       setScore(guessScore);
       setHasGuessed(true);
@@ -64,6 +96,7 @@ export default function DailyPage() {
         date: todayDate,
         savedScore: guessScore
       }));
+      await saveDailyScore(guessScore);
     }
   };
 
@@ -86,20 +119,20 @@ export default function DailyPage() {
         <p style={{ color: '#9ca3af', marginBottom: '1rem' }}>
           {todayDate} • One new location each day
         </p>
-        
+
         <img
           src={location.image_url}
           className="game-image"
         />
-        
+
         <div className="map-container">
-          <Map 
-            onGuess={handleGuess} 
+          <Map
+            onGuess={handleGuess}
             location={location}
             showAnswer={hasGuessed}
           />
         </div>
-        
+
         {hasGuessed && (
           <div className="answer-section">
             <p style={{ fontSize: '1.25rem', marginBottom: '0.5rem' }}>
@@ -113,9 +146,14 @@ export default function DailyPage() {
                 <button className="btn btn-primary">Play Full Game</button>
               </Link>
             </div>
+            {message && (
+              <p style={{ marginTop: '1rem', color: '#6b7280', fontSize: '0.95rem' }}>
+                {message}
+              </p>
+            )}
           </div>
         )}
-        
+
         {!hasGuessed && (
           <p style={{ color: '#9ca3af', fontSize: '0.875rem', marginTop: '1rem' }}>
             Click on the map to place your guess. You only get one chance today!
