@@ -129,6 +129,11 @@ export default function HomePage() {
             <button onClick={handleDailyChallenge} className="btn btn-large">
               Daily Challenge
             </button>
+            <Link href="/lobby">
+              <button className="btn btn-large">
+                Private Lobby
+              </button>
+            </Link>
           </div>
 
           <div className="user-strip">
