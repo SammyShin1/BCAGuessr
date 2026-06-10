@@ -143,31 +143,52 @@ export default function HomePage() {
           </div>
 
           <div className="user-strip">
-          {user ? (
-            <>
-              <span>
-                Logged in as: {user.email || user.user_metadata?.full_name || "User"}
-              </span>
-              {ADMIN_EMAILS.has(user.email?.toLowerCase()) && (
-                <Link href="/admin">
-                  <button className="btn">Admin</button>
+            {user ? (
+              <>
+                <span>
+                  Logged in as: {user.email || user.user_metadata?.full_name || "User"}
+                </span>
+                {ADMIN_EMAILS.has(user.email?.toLowerCase()) && (
+                  <Link href="/admin">
+                    <button className="btn">Admin</button>
+                  </Link>
+                )}
+                <button onClick={handleLogout} className="btn">Log Out</button>
+              </>
+            ) : (
+              <>
+                <Link href="/login">
+                  <button className="btn">Log In</button>
                 </Link>
-              )}
-              <button onClick={handleLogout} className="btn">Log Out</button>
-            </>
-          ) : (
-            <>
-              <Link href="/login">
-                <button className="btn">Log In</button>
-              </Link>
-              <Link href="/signup">
-                <button className="btn">Sign Up</button>
-              </Link>
-            </>
-          )}
+                <Link href="/signup">
+                  <button className="btn">Sign Up</button>
+                </Link>
+              </>
+            )}
           </div>
         </div>
       </section>
+
+      <style>{`
+        @media (max-width: 640px) {
+          .hero {
+            flex-direction: column !important;
+            align-items: center !important;
+          }
+          .hero-logo-wrapper {
+            order: -1;
+            width: 100%;
+            display: flex;
+            justify-content: center;
+            margin-bottom: 1rem;
+          }
+          .hero-content {
+            width: 100%;
+            text-align: center;
+            align-items: center;
+          }
+        }
+      `}</style>
 
       <div className="feature-grid">
         <div className="feature-card">
