@@ -1,7 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { supabase } from "../../../lib/supabase";
 import "../../globals.css";
@@ -24,6 +24,8 @@ export default function PrivateGamePage() {
   const [userGuess, setUserGuess] = useState(null);
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState("");
+
+  const hasSubmittedRef = useRef(false);
 
   async function loadGame() {
     const { data: userData } = await supabase.auth.getUser();
@@ -98,6 +100,7 @@ export default function PrivateGamePage() {
       .maybeSingle();
 
     if (existingGuess) {
+      hasSubmittedRef.current = true;
       setRoundOver(true);
       setLastScore(existingGuess.score);
       setUserGuess({
@@ -106,6 +109,7 @@ export default function PrivateGamePage() {
         score: existingGuess.score,
       });
     } else {
+      hasSubmittedRef.current = false;
       setRoundOver(false);
       setLastScore(0);
       setUserGuess(null);
@@ -138,6 +142,7 @@ export default function PrivateGamePage() {
     setLastScore(score);
     setUserGuess({ lat: guessLat, lng: guessLng, score });
     setRoundOver(true);
+    hasSubmittedRef.current = true;
 
     const { data: allGuesses } = await supabase
       .from("private_lobby_guesses")
@@ -204,6 +209,7 @@ export default function PrivateGamePage() {
     setRoundOver(false);
     setLastScore(0);
     setUserGuess(null);
+    hasSubmittedRef.current = false;
 
     await loadGame();
   }
@@ -214,8 +220,10 @@ export default function PrivateGamePage() {
     loadGame();
 
     const interval = setInterval(() => {
-      console.log("polling game...");
-      loadGame();
+      if (hasSubmittedRef.current) {
+        console.log("polling game after submit...");
+        loadGame();
+      }
     }, 1500);
 
     const channel = supabase
@@ -228,7 +236,11 @@ export default function PrivateGamePage() {
           table: "private_lobby_players",
           filter: `lobby_id=eq.${lobbyId}`,
         },
-        () => loadGame()
+        () => {
+          if (hasSubmittedRef.current) {
+            loadGame();
+          }
+        }
       )
       .on(
         "postgres_changes",
@@ -255,7 +267,11 @@ export default function PrivateGamePage() {
           table: "private_lobby_guesses",
           filter: `lobby_id=eq.${lobbyId}`,
         },
-        () => loadGame()
+        () => {
+          if (hasSubmittedRef.current) {
+            loadGame();
+          }
+        }
       )
       .subscribe((status) => {
         console.log("PRIVATE GAME REALTIME STATUS:", status);
