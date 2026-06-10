@@ -215,7 +215,8 @@ export default function PrivateGamePage() {
     loadGame();
 
     const interval = setInterval(() => {
-      loadGame();
+        console.log("polling game...");
+        loadGame();
     }, 1500);
 
     const channel = supabase
