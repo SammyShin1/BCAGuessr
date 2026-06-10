@@ -124,7 +124,7 @@ export default function HomePage() {
             <div className="hero-kicker">Bergen County Academies</div>
             <h1>BCAGuessr</h1>
             <p className="hero-copy">
-              Place each photo on the BCA map and see how well you know the building.
+              Guess the location of images around BCA and see how well you know the building
             </p>
           </div>
 
@@ -174,7 +174,7 @@ export default function HomePage() {
           <span className="feature-index">01</span>
           <h3>Classic Game</h3>
           <p>
-            5 rounds of location guessing. Score up to 5000 points per round!
+            5 rounds, 5000 points per round
           </p>
           <button onClick={handleStartPlaying} className="btn">
             Play Now
@@ -185,7 +185,7 @@ export default function HomePage() {
           <span className="feature-index">02</span>
           <h3>Daily Challenge</h3>
           <p>
-            One new location every day. Compete with yourself!
+            One new location every day
           </p>
           <button onClick={handleDailyChallenge} className="btn">
             Daily Challenge
@@ -196,12 +196,10 @@ export default function HomePage() {
           <span className="feature-index">03</span>
           <h3>Leaderboard</h3>
           <p>
-            Compete with other players and view top scores.
+            View top scores
           </p>
-          <Link href="/leaderboard">
-            <button className="btn">
-              View Leaderboard
-            </button>
+          <Link href="/leaderboard" className="btn">
+            View Leaderboard
           </Link>
         </div>
       </div>
