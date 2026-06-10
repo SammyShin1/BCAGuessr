@@ -115,12 +115,18 @@ export default function HomePage() {
       )}
 
       <section className="hero">
+        <div className="hero-logo-wrapper">
+          <img src="/bcaguessr-logo.png" alt="BCAGuessr logo" className="hero-logo" />
+        </div>
+
         <div className="hero-content">
-          <div className="hero-kicker">Bergen County Academies</div>
-          <h1>BCAGuessr</h1>
-          <p className="hero-copy">
-            Place each photo on the BCA map and see how well you know the building.
-          </p>
+          <div className="hero-text">
+            <div className="hero-kicker">Bergen County Academies</div>
+            <h1>BCAGuessr</h1>
+            <p className="hero-copy">
+              Place each photo on the BCA map and see how well you know the building.
+            </p>
+          </div>
 
           <div className="home-actions">
             <button onClick={handleStartPlaying} className="btn btn-primary btn-large">

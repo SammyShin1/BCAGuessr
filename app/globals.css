@@ -236,12 +236,20 @@ button:disabled {
 
 .hero {
   min-height: 420px;
-  display: grid;
-  place-items: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1.25rem;
   padding: 4rem 1.5rem 3rem;
   position: relative;
   overflow: hidden;
   text-align: left;
+}
+.hero-logo-wrapper {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .hero::before {
@@ -252,6 +260,7 @@ button:disabled {
     linear-gradient(90deg, rgba(12, 15, 13, 0.96), rgba(12, 15, 13, 0.78) 52%, rgba(12, 15, 13, 0.96)),
     url('/bca-map.png') center / cover;
   opacity: 0.72;
+  z-index: 0;
 }
 
 .hero::after {
@@ -260,12 +269,17 @@ button:disabled {
   inset: auto 0 0;
   height: 1px;
   background: var(--border);
+  z-index: 2;
 }
 
 .hero-content {
-  width: min(880px, 100%);
+  width: min(720px, 100%);
   position: relative;
   z-index: 1;
+}
+
+.hero-text {
+  max-width: 560px;
 }
 
 .hero-kicker,
@@ -276,11 +290,17 @@ button:disabled {
 }
 
 .hero h1 {
-  max-width: 720px;
   margin: 0.35rem 0 0.7rem;
   color: var(--text);
   font-size: clamp(2.5rem, 8vw, 5.4rem);
   line-height: 0.95;
+}
+
+.hero-logo {
+  width: clamp(12rem, 32vw, 20rem);
+  height: clamp(12rem, 32vw, 20rem);
+  object-fit: contain;
+  z-index: 2;
 }
 
 .hero-copy {
@@ -850,7 +870,6 @@ button:disabled {
 }
 
 @media (max-width: 960px) {
-
   .feature-grid,
   .game-container,
   .admin-layout,
@@ -868,7 +887,6 @@ button:disabled {
 }
 
 @media (max-width: 768px) {
-
   .navbar-content,
   .page-header,
   .admin-topbar,
