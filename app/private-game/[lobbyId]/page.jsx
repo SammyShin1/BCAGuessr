@@ -281,6 +281,15 @@ export default function PrivateGamePage() {
             return;
           }
 
+          if (payload.new.round !== lobby?.round) {
+            hasSubmittedRef.current = false;
+            setRoundOver(false);
+            setLastScore(0);
+            setUserGuess(null);
+            loadGame();
+            return;
+          }
+
           if (hasSubmittedRef.current) {
             loadLobbyStatusAndPlayers();
           } else {
@@ -310,7 +319,7 @@ export default function PrivateGamePage() {
       clearInterval(interval);
       supabase.removeChannel(channel);
     };
-  }, [lobbyId, router]);
+  }, [lobbyId, router, lobby?.round]);
 
   const isHost = user?.id === lobby?.host_id;
 
