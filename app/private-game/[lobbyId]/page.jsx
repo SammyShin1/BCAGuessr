@@ -118,6 +118,31 @@ export default function PrivateGamePage() {
     setLoading(false);
   }
 
+  async function loadLobbyStatusAndPlayers() {
+    const { data: lobbyData, error: lobbyError } = await supabase
+      .from("private_lobbies")
+      .select("*")
+      .eq("id", lobbyId)
+      .single();
+
+    if (lobbyError || !lobbyData) return;
+
+    setLobby(lobbyData);
+
+    if (lobbyData.status === "complete") {
+      router.push(`/private-game/${lobbyId}/results`);
+      return;
+    }
+
+    const { data: playerData } = await supabase
+      .from("private_lobby_players")
+      .select("*")
+      .eq("lobby_id", lobbyId)
+      .order("score", { ascending: false });
+
+    setPlayers(playerData || []);
+  }
+
   async function handleGuess(score, guessLat, guessLng) {
     if (!user || !lobby || roundOver) return;
 
@@ -165,7 +190,7 @@ export default function PrivateGamePage() {
       .eq("lobby_id", lobbyId)
       .eq("user_id", user.id);
 
-    await loadGame();
+    await loadLobbyStatusAndPlayers();
   }
 
   async function nextRound() {
@@ -221,8 +246,8 @@ export default function PrivateGamePage() {
 
     const interval = setInterval(() => {
       if (hasSubmittedRef.current) {
-        console.log("polling game after submit...");
-        loadGame();
+        console.log("polling scores after submit...");
+        loadLobbyStatusAndPlayers();
       }
     }, 1500);
 
@@ -238,7 +263,7 @@ export default function PrivateGamePage() {
         },
         () => {
           if (hasSubmittedRef.current) {
-            loadGame();
+            loadLobbyStatusAndPlayers();
           }
         }
       )
@@ -256,7 +281,11 @@ export default function PrivateGamePage() {
             return;
           }
 
-          loadGame();
+          if (hasSubmittedRef.current) {
+            loadLobbyStatusAndPlayers();
+          } else {
+            loadGame();
+          }
         }
       )
       .on(
@@ -269,7 +298,7 @@ export default function PrivateGamePage() {
         },
         () => {
           if (hasSubmittedRef.current) {
-            loadGame();
+            loadLobbyStatusAndPlayers();
           }
         }
       )
