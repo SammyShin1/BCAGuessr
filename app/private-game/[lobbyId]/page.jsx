@@ -1,7 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { supabase } from "../../../lib/supabase";
 import "../../globals.css";
@@ -24,6 +24,8 @@ export default function PrivateGamePage() {
   const [userGuess, setUserGuess] = useState(null);
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState("");
+
+  const hasSubmittedRef = useRef(false);
 
   async function loadGame() {
     const { data: userData } = await supabase.auth.getUser();
@@ -98,6 +100,7 @@ export default function PrivateGamePage() {
       .maybeSingle();
 
     if (existingGuess) {
+      hasSubmittedRef.current = true;
       setRoundOver(true);
       setLastScore(existingGuess.score);
       setUserGuess({
@@ -106,12 +109,38 @@ export default function PrivateGamePage() {
         score: existingGuess.score,
       });
     } else {
+      hasSubmittedRef.current = false;
       setRoundOver(false);
       setLastScore(0);
       setUserGuess(null);
     }
 
     setLoading(false);
+  }
+
+  async function loadLobbyStatusAndPlayers() {
+    const { data: lobbyData, error: lobbyError } = await supabase
+      .from("private_lobbies")
+      .select("*")
+      .eq("id", lobbyId)
+      .single();
+
+    if (lobbyError || !lobbyData) return;
+
+    setLobby(lobbyData);
+
+    if (lobbyData.status === "complete") {
+      router.push(`/private-game/${lobbyId}/results`);
+      return;
+    }
+
+    const { data: playerData } = await supabase
+      .from("private_lobby_players")
+      .select("*")
+      .eq("lobby_id", lobbyId)
+      .order("score", { ascending: false });
+
+    setPlayers(playerData || []);
   }
 
   async function handleGuess(score, guessLat, guessLng) {
@@ -138,6 +167,7 @@ export default function PrivateGamePage() {
     setLastScore(score);
     setUserGuess({ lat: guessLat, lng: guessLng, score });
     setRoundOver(true);
+    hasSubmittedRef.current = true;
 
     const { data: allGuesses } = await supabase
       .from("private_lobby_guesses")
@@ -160,14 +190,13 @@ export default function PrivateGamePage() {
       .eq("lobby_id", lobbyId)
       .eq("user_id", user.id);
 
-    await loadGame();
+    await loadLobbyStatusAndPlayers();
   }
 
   async function nextRound() {
     if (!lobby || !user) return;
 
     const isHost = user.id === lobby.host_id;
-
     if (!isHost) return;
 
     const everyoneFinishedRound =
@@ -205,6 +234,7 @@ export default function PrivateGamePage() {
     setRoundOver(false);
     setLastScore(0);
     setUserGuess(null);
+    hasSubmittedRef.current = false;
 
     await loadGame();
   }
@@ -215,7 +245,10 @@ export default function PrivateGamePage() {
     loadGame();
 
     const interval = setInterval(() => {
-      loadGame();
+      if (hasSubmittedRef.current) {
+        console.log("polling scores after submit...");
+        loadLobbyStatusAndPlayers();
+      }
     }, 1500);
 
     const channel = supabase
@@ -228,9 +261,10 @@ export default function PrivateGamePage() {
           table: "private_lobby_players",
           filter: `lobby_id=eq.${lobbyId}`,
         },
-        (payload) => {
-          console.log("PRIVATE PLAYER CHANGE:", payload);
-          loadGame();
+        () => {
+          if (hasSubmittedRef.current) {
+            loadLobbyStatusAndPlayers();
+          }
         }
       )
       .on(
@@ -242,14 +276,25 @@ export default function PrivateGamePage() {
           filter: `id=eq.${lobbyId}`,
         },
         (payload) => {
-          console.log("PRIVATE LOBBY CHANGE:", payload);
-
           if (payload.new.status === "complete") {
             router.push(`/private-game/${lobbyId}/results`);
             return;
           }
 
-          loadGame();
+          if (payload.new.round !== lobby?.round) {
+            hasSubmittedRef.current = false;
+            setRoundOver(false);
+            setLastScore(0);
+            setUserGuess(null);
+            loadGame();
+            return;
+          }
+
+          if (hasSubmittedRef.current) {
+            loadLobbyStatusAndPlayers();
+          } else {
+            loadGame();
+          }
         }
       )
       .on(
@@ -260,9 +305,10 @@ export default function PrivateGamePage() {
           table: "private_lobby_guesses",
           filter: `lobby_id=eq.${lobbyId}`,
         },
-        (payload) => {
-          console.log("PRIVATE GUESS CHANGE:", payload);
-          loadGame();
+        () => {
+          if (hasSubmittedRef.current) {
+            loadLobbyStatusAndPlayers();
+          }
         }
       )
       .subscribe((status) => {
@@ -273,7 +319,7 @@ export default function PrivateGamePage() {
       clearInterval(interval);
       supabase.removeChannel(channel);
     };
-  }, [lobbyId, router]);
+  }, [lobbyId, router, lobby?.round]);
 
   const isHost = user?.id === lobby?.host_id;
 
