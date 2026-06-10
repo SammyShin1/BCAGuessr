@@ -167,7 +167,6 @@ export default function PrivateGamePage() {
     if (!lobby || !user) return;
 
     const isHost = user.id === lobby.host_id;
-
     if (!isHost) return;
 
     const everyoneFinishedRound =
@@ -215,8 +214,8 @@ export default function PrivateGamePage() {
     loadGame();
 
     const interval = setInterval(() => {
-        console.log("polling game...");
-        loadGame();
+      console.log("polling game...");
+      loadGame();
     }, 1500);
 
     const channel = supabase
@@ -229,10 +228,7 @@ export default function PrivateGamePage() {
           table: "private_lobby_players",
           filter: `lobby_id=eq.${lobbyId}`,
         },
-        (payload) => {
-          console.log("PRIVATE PLAYER CHANGE:", payload);
-          loadGame();
-        }
+        () => loadGame()
       )
       .on(
         "postgres_changes",
@@ -243,8 +239,6 @@ export default function PrivateGamePage() {
           filter: `id=eq.${lobbyId}`,
         },
         (payload) => {
-          console.log("PRIVATE LOBBY CHANGE:", payload);
-
           if (payload.new.status === "complete") {
             router.push(`/private-game/${lobbyId}/results`);
             return;
@@ -261,10 +255,7 @@ export default function PrivateGamePage() {
           table: "private_lobby_guesses",
           filter: `lobby_id=eq.${lobbyId}`,
         },
-        (payload) => {
-          console.log("PRIVATE GUESS CHANGE:", payload);
-          loadGame();
-        }
+        () => loadGame()
       )
       .subscribe((status) => {
         console.log("PRIVATE GAME REALTIME STATUS:", status);
