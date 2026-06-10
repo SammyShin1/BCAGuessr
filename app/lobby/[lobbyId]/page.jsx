@@ -84,42 +84,47 @@ export default function LobbyRoomPage() {
     router.push(`/private-game/${lobbyId}`);
   }
 
-  useEffect(() => {
+    useEffect(() => {
+    if (!lobbyId) return;
+
     loadLobby();
 
     const channel = supabase
-      .channel(`lobby-room-${lobbyId}`)
-      .on(
+        .channel(`lobby-room-${lobbyId}`)
+        .on(
         "postgres_changes",
         {
-          event: "*",
-          schema: "public",
-          table: "private_lobby_players",
-          filter: `lobby_id=eq.${lobbyId}`,
-        },
-        () => loadLobby()
-      )
-      .on(
-        "postgres_changes",
-        {
-          event: "UPDATE",
-          schema: "public",
-          table: "private_lobbies",
-          filter: `id=eq.${lobbyId}`,
+            event: "*",
+            schema: "public",
+            table: "private_lobby_players",
+            filter: `lobby_id=eq.${lobbyId}`,
         },
         (payload) => {
-          setLobby(payload.new);
-          if (payload.new.status === "playing") {
-            router.push(`/private-game/${lobbyId}`);
-          }
+            console.log("PLAYER CHANGE:", payload);
+            loadLobby();
         }
-      )
-      .subscribe();
+        )
+        .on(
+        "postgres_changes",
+        {
+            event: "*",
+            schema: "public",
+            table: "private_lobbies",
+            filter: `id=eq.${lobbyId}`,
+        },
+        (payload) => {
+            console.log("LOBBY CHANGE:", payload);
+            loadLobby();
+        }
+        )
+        .subscribe((status) => {
+        console.log("REALTIME STATUS:", status);
+        });
 
     return () => {
-      supabase.removeChannel(channel);
+        supabase.removeChannel(channel);
     };
-  }, [lobbyId]);
+    }, [lobbyId]);
 
   if (!lobby) {
     return <p className="loading">Loading lobby...</p>;
