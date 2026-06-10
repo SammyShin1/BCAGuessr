@@ -15,13 +15,15 @@ const Map = dynamic(() => import('../../components/Map'), {
 const TOTAL_ROUNDS = 5;
 const ROUND_COMPLETION_STATE_KEY = 'bcaguessr_round_completion';
 
-function LeaveModal({ onStay, onLeave }) {
+function LeaveModal({ onStay, onLeave, round }) {
   return (
     <div className="modal-backdrop">
       <div className="modal-dialog card">
         <h3>Leave this game?</h3>
         <p className="modal-copy">
-          You have a game already in progress. Returning home will keep your session available to resume later.
+          {round === 1
+            ? "You haven't finished round 1 yet. Leaving now will abandon this game."
+            : "You have a game already in progress. Returning home will keep your session available to resume later."}
         </p>
         <div className="modal-actions">
           <button onClick={onStay} className="btn btn-primary">Stay</button>
@@ -189,6 +191,18 @@ export default function GamePage() {
     setRoundOver(false);
     const newTotal = totalScore;
 
+    if (!sessionId) {
+      const { data: userData, error: userError } = await supabase.auth.getUser();
+      if (userError || !userData?.user) {
+        console.error('Unable to create game session: user not logged in.');
+        return;
+      }
+
+      const session = await createSession(userData.user.id, location);
+      if (!session) return;
+      setSessionId(session.id);
+    }
+
     if (round >= TOTAL_ROUNDS) {
       await saveScore(newTotal, 'normal');
       await updateSession(sessionId, { status: 'complete', total_score: newTotal });
@@ -311,10 +325,7 @@ export default function GamePage() {
         await preloadImages(preloaded);
 
         const firstLocation = preloaded[0];
-        const session = await createSession(data.user.id, firstLocation);
-        if (!session) return;
-
-        setSessionId(session.id);
+        setSessionId(null);
         setPreloadedLocations(preloaded);
         setUsedLocationIds(preloaded.map((p) => p.id));
         setLocation(firstLocation);
@@ -327,7 +338,7 @@ export default function GamePage() {
   }, [router]);
 
   const leaveModal = showLeaveModal ? (
-    <LeaveModal onStay={handleStay} onLeave={handleLeaveConfirmed} />
+    <LeaveModal onStay={handleStay} onLeave={handleLeaveConfirmed} round={round} />
   ) : null;
 
   if (checkingAuth) {
@@ -344,7 +355,7 @@ export default function GamePage() {
       <>
         {leaveModal}
         <div style={{ textAlign: 'center', padding: '2rem 1rem' }}>
-          <div className="card" style={{ maxWidth: '800px', margin: '0 auto' }}>
+          <div className="card" style={{ maxWidth: '1100px', margin: '0 auto' }}>
             <h2 style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>Round {round} Complete!</h2>
             <p style={{ fontSize: '1.5rem', margin: '0.5rem 0' }}>
               Score: <span className="score-display">{lastScore}</span> / 5000
@@ -352,12 +363,19 @@ export default function GamePage() {
             <p style={{ color: '#9ca3af', marginBottom: '1rem' }}>
               Total: {totalScore} / {round * 5000}
             </p>
-            <div className="map-container">
-              <Map
-                showAnswer={true}
-                location={location}
-                userGuess={userGuess}
+            <div className="game-container">
+              <img
+                src={location.image_url}
+                className="game-image"
+                alt="Location clue"
               />
+              <div className="map-container">
+                <Map
+                  showAnswer={true}
+                  location={location}
+                  userGuess={userGuess}
+                />
+              </div>
             </div>
             <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center', marginTop: '1rem', flexWrap: 'wrap' }}>
               <button onClick={continueGame} className="btn btn-primary">

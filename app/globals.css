@@ -850,6 +850,7 @@ button:disabled {
 }
 
 @media (max-width: 960px) {
+
   .feature-grid,
   .game-container,
   .admin-layout,
@@ -867,6 +868,7 @@ button:disabled {
 }
 
 @media (max-width: 768px) {
+
   .navbar-content,
   .page-header,
   .admin-topbar,

@@ -17,6 +17,7 @@ export default function DailyPage() {
   const [hasGuessed, setHasGuessed] = useState(false);
   const [loading, setLoading] = useState(true);
   const [todayDate, setTodayDate] = useState('');
+  const [resetTimeLeft, setResetTimeLeft] = useState('');
   const [message, setMessage] = useState('');
 
   // Get daily location based on date
@@ -100,8 +101,30 @@ export default function DailyPage() {
     }
   };
 
+  const getNextResetTime = () => {
+    const now = new Date();
+    const nextReset = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 1));
+    return nextReset.getTime() - now.getTime();
+  };
+
+  const formatTimeLeft = (milliseconds) => {
+    const totalSeconds = Math.max(0, Math.floor(milliseconds / 1000));
+    const hours = String(Math.floor(totalSeconds / 3600)).padStart(2, '0');
+    const minutes = String(Math.floor((totalSeconds % 3600) / 60)).padStart(2, '0');
+    const seconds = String(totalSeconds % 60).padStart(2, '0');
+    return `${hours}:${minutes}:${seconds}`;
+  };
+
   useEffect(() => {
     getDailyLocation();
+  }, []);
+
+  useEffect(() => {
+    setResetTimeLeft(formatTimeLeft(getNextResetTime()));
+    const interval = setInterval(() => {
+      setResetTimeLeft(formatTimeLeft(getNextResetTime()));
+    }, 1000);
+    return () => clearInterval(interval);
   }, []);
 
   if (loading) {
@@ -116,8 +139,11 @@ export default function DailyPage() {
     <div style={{ padding: '1rem 0' }}>
       <div className="card">
         <h2 style={{ fontSize: '1.75rem', marginBottom: '0.5rem' }}>Daily Challenge</h2>
-        <p style={{ color: '#9ca3af', marginBottom: '1rem' }}>
+        <p style={{ color: '#9ca3af', marginBottom: '0.5rem' }}>
           {todayDate} • One new location each day
+        </p>
+        <p style={{ color: '#9ca3af', fontSize: '0.95rem', marginBottom: '1rem' }}>
+          Resets in {resetTimeLeft}
         </p>
 
         <img
