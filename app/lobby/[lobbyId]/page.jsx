@@ -91,7 +91,9 @@ export default function LobbyRoomPage() {
   useEffect(() => {
     if (!lobbyId) return;
 
-    loadLobby();
+    queueMicrotask(() => {
+      loadLobby();
+    });
 
     const interval = setInterval(() => {
       console.log("polling lobby...");

@@ -11,15 +11,17 @@ export default function LeaderboardPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    const effectiveFilter = mode === "daily" ? "daily" : filter;
+
     function getStartDate() {
       const now = new Date();
 
-      if (filter === "daily") {
+      if (effectiveFilter === "daily") {
         now.setHours(0, 0, 0, 0);
         return now.toISOString();
       }
 
-      if (filter === "weekly") {
+      if (effectiveFilter === "weekly") {
         const day = now.getDay();
         const diff = now.getDate() - day;
         now.setDate(diff);
@@ -27,7 +29,7 @@ export default function LeaderboardPage() {
         return now.toISOString();
       }
 
-      if (filter === "monthly") {
+      if (effectiveFilter === "monthly") {
         now.setDate(1);
         now.setHours(0, 0, 0, 0);
         return now.toISOString();
@@ -79,7 +81,7 @@ export default function LeaderboardPage() {
           <h1>Leaderboard</h1>
           <p>Top scores across BCA location challenges.</p>
         </div>
-        <Link href="/" className="btn">Home</Link>
+        <Link href="/" className="btn">Return Home</Link>
       </div>
 
       <div className="segmented">
@@ -92,45 +94,50 @@ export default function LeaderboardPage() {
 
         <button
           className={`segment-btn ${mode === "daily" ? "active" : ""}`}
-          onClick={() => setMode("daily")}
+          onClick={() => {
+            setMode("daily");
+            setFilter("daily");
+          }}
         >
           Daily Challenge
         </button>
       </div>
 
-      <div className="segmented">
-        <button
-          className={`segment-btn ${filter === "daily" ? "active" : ""}`}
-          onClick={() => setFilter("daily")}
-        >
-          Daily
-        </button>
+      {mode === "normal" && (
+        <div className="segmented">
+          <button
+            className={`segment-btn ${filter === "daily" ? "active" : ""}`}
+            onClick={() => setFilter("daily")}
+          >
+            Daily
+          </button>
 
-        <button
-          className={`segment-btn ${filter === "weekly" ? "active" : ""}`}
-          onClick={() => setFilter("weekly")}
-        >
-          Weekly
-        </button>
+          <button
+            className={`segment-btn ${filter === "weekly" ? "active" : ""}`}
+            onClick={() => setFilter("weekly")}
+          >
+            Weekly
+          </button>
 
-        <button
-          className={`segment-btn ${filter === "monthly" ? "active" : ""}`}
-          onClick={() => setFilter("monthly")}
-        >
-          Monthly
-        </button>
+          <button
+            className={`segment-btn ${filter === "monthly" ? "active" : ""}`}
+            onClick={() => setFilter("monthly")}
+          >
+            Monthly
+          </button>
 
-        <button
-          className={`segment-btn ${filter === "all" ? "active" : ""}`}
-          onClick={() => setFilter("all")}
-        >
-          All Time
-        </button>
-      </div>
+          <button
+            className={`segment-btn ${filter === "all" ? "active" : ""}`}
+            onClick={() => setFilter("all")}
+          >
+            All Time
+          </button>
+        </div>
+      )}
 
       <p className="leaderboard-summary">
-        <strong>{mode === "normal" ? "Normal Game" : "Daily Challenge"}</strong>{" "}
-        · <strong>{filter}</strong>
+        <strong>{mode === "normal" ? "Normal Game" : "Daily Challenge"}</strong>
+        {mode === "normal" && <> · <strong>{filter}</strong></>}
       </p>
 
       {loading ? (

@@ -15,6 +15,25 @@ const Map = dynamic(() => import('../../components/Map'), {
 const TOTAL_ROUNDS = 5;
 const ROUND_COMPLETION_STATE_KEY = 'bcaguessr_round_completion';
 
+function getDifficultyInfo(difficulty) {
+  const value = Number(difficulty);
+  if (!Number.isFinite(value)) {
+    return { label: 'Difficulty: Unset', className: 'difficulty-unset' };
+  }
+  if (value <= 2) return { label: `Difficulty: ${value} - Easy`, className: 'difficulty-easy' };
+  if (value === 3) return { label: 'Difficulty: 3 - Medium', className: 'difficulty-medium' };
+  return { label: `Difficulty: ${value} - Hard`, className: 'difficulty-hard' };
+}
+
+function formatFloor(value) {
+  const floor = Number(value);
+  if (floor === -1) return 'Outside';
+  if (floor === 0) return 'Basement';
+  if (floor === 1) return 'Floor 1';
+  if (floor === 2) return 'Floor 2';
+  return 'Unknown';
+}
+
 function LeaveModal({ onStay, onLeave, round }) {
   return (
     <div className="modal-backdrop">
@@ -77,7 +96,7 @@ export default function GamePage() {
   };
 
   const handleReturnHome = () => {
-    setShowLeaveModal(true);
+    router.push('/');
   };
 
   const handleLeaveConfirmed = () => {
@@ -177,13 +196,14 @@ export default function GamePage() {
     if (error) console.error('Error saving score:', error);
   }
 
-  function nextRound(score, guessLat, guessLng) {
+  function nextRound(score, guessLat, guessLng, guessFloor) {
     const nextTotal = totalScore + score;
+    const nextGuess = { lat: guessLat, lng: guessLng, floor: guessFloor, score };
     setLastScore(score);
     setTotalScore(nextTotal);
-    setUserGuess({ lat: guessLat, lng: guessLng, score });
+    setUserGuess(nextGuess);
     setRoundOver(true);
-    saveRoundCompletionState(sessionId, round, nextTotal, score, { lat: guessLat, lng: guessLng, score });
+    saveRoundCompletionState(sessionId, round, nextTotal, score, nextGuess);
   }
 
   async function continueGame() {
@@ -356,12 +376,18 @@ export default function GamePage() {
         {leaveModal}
         <div style={{ textAlign: 'center', padding: '2rem 1rem' }}>
           <div className="card" style={{ maxWidth: '1100px', margin: '0 auto' }}>
-            <h2 style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>Round {round} Complete!</h2>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '1rem', marginBottom: '0.5rem' }}>
+              <h2 style={{ fontSize: '2rem' }}>Round {round} Complete!</h2>
+              <button onClick={handleReturnHome} className="btn">Return Home</button>
+            </div>
             <p style={{ fontSize: '1.5rem', margin: '0.5rem 0' }}>
               Score: <span className="score-display">{lastScore}</span> / 5000
             </p>
             <p style={{ color: '#9ca3af', marginBottom: '1rem' }}>
               Total: {totalScore} / {round * 5000}
+            </p>
+            <p className="answer-floor">
+              Correct floor: <strong>{formatFloor(location.level)}</strong>
             </p>
             <div className="game-container">
               <img
@@ -381,7 +407,6 @@ export default function GamePage() {
               <button onClick={continueGame} className="btn btn-primary">
                 {round >= TOTAL_ROUNDS ? 'See Final Score' : 'Next Round'}
               </button>
-              <button onClick={handleReturnHome} className="btn">Return Home</button>
             </div>
           </div>
         </div>
@@ -419,6 +444,8 @@ export default function GamePage() {
     );
   }
 
+  const difficultyInfo = getDifficultyInfo(location.difficulty);
+
   return (
     <>
       {leaveModal}
@@ -440,8 +467,8 @@ export default function GamePage() {
               <Map onGuess={nextRound} location={location} />
             </div>
           </div>
-          <p style={{ color: '#9ca3af', fontSize: '0.875rem', marginTop: '1rem' }}>
-            Click on the map to place your marker, then click Submit. Score is based on distance.
+          <p className={`difficulty-text ${difficultyInfo.className}`}>
+            {difficultyInfo.label}
           </p>
         </div>
       </div>

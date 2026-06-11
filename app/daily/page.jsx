@@ -11,10 +11,37 @@ const Map = dynamic(() => import('../../components/Map'), {
   loading: () => <p className="loading">Loading map...</p>
 });
 
+function getLocalDateKey(date = new Date()) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+function getDifficultyInfo(difficulty) {
+  const value = Number(difficulty);
+  if (!Number.isFinite(value)) {
+    return { label: 'Difficulty: Unset', className: 'difficulty-unset' };
+  }
+  if (value <= 2) return { label: `Difficulty: ${value} - Easy`, className: 'difficulty-easy' };
+  if (value === 3) return { label: 'Difficulty: 3 - Medium', className: 'difficulty-medium' };
+  return { label: `Difficulty: ${value} - Hard`, className: 'difficulty-hard' };
+}
+
+function formatFloor(value) {
+  const floor = Number(value);
+  if (floor === -1) return 'Outside';
+  if (floor === 0) return 'Basement';
+  if (floor === 1) return 'Floor 1';
+  if (floor === 2) return 'Floor 2';
+  return 'Unknown';
+}
+
 export default function DailyPage() {
   const [location, setLocation] = useState(null);
   const [score, setScore] = useState(null);
   const [hasGuessed, setHasGuessed] = useState(false);
+  const [userGuess, setUserGuess] = useState(null);
   const [loading, setLoading] = useState(true);
   const [todayDate, setTodayDate] = useState('');
   const [resetTimeLeft, setResetTimeLeft] = useState('');
@@ -31,7 +58,7 @@ export default function DailyPage() {
 
     if (data && data.length > 0) {
       // Use date to determine consistent location for all users
-      const today = new Date().toISOString().split('T')[0];
+      const today = getLocalDateKey();
       setTodayDate(today);
 
       // Simple hash of today's date to pick a location
@@ -43,14 +70,18 @@ export default function DailyPage() {
       const dailyIndex = Math.abs(hash) % data.length;
       const dailyLocation = data[dailyIndex];
       setLocation(dailyLocation);
+      setHasGuessed(false);
+      setScore(null);
+      setUserGuess(null);
 
       // Check if user already guessed today
       const stored = localStorage.getItem('bcaguessr_daily');
       if (stored) {
-        const { date, savedScore } = JSON.parse(stored);
+        const { date, savedScore, savedGuess } = JSON.parse(stored);
         if (date === today) {
           setScore(savedScore);
           setHasGuessed(true);
+          setUserGuess(savedGuess || null);
         }
       }
     }
@@ -88,14 +119,17 @@ export default function DailyPage() {
     setMessage('Score saved to daily leaderboard.');
   };
 
-  const handleGuess = async (guessScore) => {
+  const handleGuess = async (guessScore, guessLat, guessLng, guessFloor) => {
     if (!hasGuessed) {
+      const savedGuess = { lat: guessLat, lng: guessLng, floor: guessFloor, score: guessScore };
       setScore(guessScore);
       setHasGuessed(true);
+      setUserGuess(savedGuess);
       // Save to localStorage
       localStorage.setItem('bcaguessr_daily', JSON.stringify({
         date: todayDate,
-        savedScore: guessScore
+        savedScore: guessScore,
+        savedGuess,
       }));
       await saveDailyScore(guessScore);
     }
@@ -103,7 +137,7 @@ export default function DailyPage() {
 
   const getNextResetTime = () => {
     const now = new Date();
-    const nextReset = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 1));
+    const nextReset = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
     return nextReset.getTime() - now.getTime();
   };
 
@@ -116,16 +150,26 @@ export default function DailyPage() {
   };
 
   useEffect(() => {
-    getDailyLocation();
+    queueMicrotask(() => {
+      getDailyLocation();
+    });
   }, []);
 
   useEffect(() => {
-    setResetTimeLeft(formatTimeLeft(getNextResetTime()));
-    const interval = setInterval(() => {
+    const updateResetTime = () => {
+      if (todayDate && getLocalDateKey() !== todayDate) {
+        getDailyLocation();
+        return;
+      }
       setResetTimeLeft(formatTimeLeft(getNextResetTime()));
+    };
+
+    queueMicrotask(updateResetTime);
+    const interval = setInterval(() => {
+      updateResetTime();
     }, 1000);
     return () => clearInterval(interval);
-  }, []);
+  }, [todayDate]);
 
   if (loading) {
     return <div className="loading">Loading daily challenge...</div>;
@@ -135,28 +179,39 @@ export default function DailyPage() {
     return <div className="loading">No locations available. Please check your database.</div>;
   }
 
+  const difficultyInfo = getDifficultyInfo(location.difficulty);
+
   return (
     <div style={{ padding: '1rem 0' }}>
       <div className="card">
-        <h2 style={{ fontSize: '1.75rem', marginBottom: '0.5rem' }}>Daily Challenge</h2>
-        <p style={{ color: '#9ca3af', marginBottom: '0.5rem' }}>
-          {todayDate} • One new location each day
-        </p>
+        <div className="daily-header">
+          <div>
+            <h2 style={{ fontSize: '1.75rem', marginBottom: '0.5rem' }}>Daily Challenge</h2>
+            <p style={{ color: '#9ca3af', marginBottom: '0.5rem' }}>
+              {todayDate} • One new location each day
+            </p>
+          </div>
+          <Link href="/" className="btn">Return Home</Link>
+        </div>
         <p style={{ color: '#9ca3af', fontSize: '0.95rem', marginBottom: '1rem' }}>
           Resets in {resetTimeLeft}
         </p>
 
-        <img
-          src={location.image_url}
-          className="game-image"
-        />
-
-        <div className="map-container">
-          <Map
-            onGuess={handleGuess}
-            location={location}
-            showAnswer={hasGuessed}
+        <div className="game-container">
+          <img
+            src={location.image_url}
+            className="game-image"
+            alt="Daily challenge location"
           />
+
+          <div className="map-container">
+            <Map
+              onGuess={handleGuess}
+              location={location}
+              showAnswer={hasGuessed}
+              userGuess={userGuess}
+            />
+          </div>
         </div>
 
         {hasGuessed && (
@@ -166,6 +221,9 @@ export default function DailyPage() {
             </p>
             <p style={{ color: '#9ca3af' }}>
               {score === 5000 ? 'Perfect! Amazing guess!' : score >= 4000 ? 'Great job!' : score >= 2500 ? 'Good effort!' : 'Try again tomorrow for a better score!'}
+            </p>
+            <p className="answer-floor">
+              Correct floor: <strong>{formatFloor(location.level)}</strong>
             </p>
             <div style={{ marginTop: '1rem' }}>
               <Link href="/game">
@@ -181,8 +239,8 @@ export default function DailyPage() {
         )}
 
         {!hasGuessed && (
-          <p style={{ color: '#9ca3af', fontSize: '0.875rem', marginTop: '1rem' }}>
-            Click on the map to place your guess. You only get one chance today!
+          <p className={`difficulty-text ${difficultyInfo.className}`}>
+            {difficultyInfo.label}
           </p>
         )}
       </div>

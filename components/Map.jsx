@@ -1,12 +1,32 @@
 'use client';
 import { useState, useEffect, useRef } from 'react';
 
+const FLOOR_OPTIONS = [
+  { value: '-1', label: 'Outside' },
+  { value: '0', label: 'Basement' },
+  { value: '1', label: 'Floor 1' },
+  { value: '2', label: 'Floor 2' },
+];
+
+function normalizeFloor(value) {
+  if (value === null || value === undefined || value === '') return null;
+  const floor = Number(value);
+  return Number.isFinite(floor) ? floor : null;
+}
+
+function formatFloor(value) {
+  const floor = normalizeFloor(value);
+  const option = FLOOR_OPTIONS.find((item) => Number(item.value) === floor);
+  return option?.label || 'Unknown';
+}
+
 export default function Map({ onGuess, location, showAnswer, userGuess }) {
   const mapRef = useRef(null);
   const guessMarkerRef = useRef(null);
   const answerMarkerRef = useRef(null);
   const lineRef = useRef(null);
   const [tempGuess, setTempGuess] = useState(null);
+  const [floorGuess, setFloorGuess] = useState('');
   const [submittedGuess, setSubmittedGuess] = useState(null);
   const [score, setScore] = useState(null);
   const [mapReady, setMapReady] = useState(false);
@@ -22,12 +42,18 @@ export default function Map({ onGuess, location, showAnswer, userGuess }) {
     return R * c;
   };
 
-  const calculateScore = (distanceKm) => {
+  const calculateDistanceScore = (distanceKm) => {
     const distanceMeters = distanceKm * 1000;
-    if (distanceMeters <= 5) return 5000;
+    if (distanceMeters <= 5) return 4000;
     const d = distanceMeters - 5;
-    const score = Math.round(4999 * Math.exp(-(d * d) / 5000));
+    const score = Math.round(3999 * Math.exp(-(d * d) / 5000));
     return Math.max(0, score);
+  };
+
+  const calculateScore = (distanceKm, guessedFloor) => {
+    const distanceScore = calculateDistanceScore(distanceKm);
+    const floorScore = normalizeFloor(guessedFloor) === normalizeFloor(location?.level) ? 1000 : 0;
+    return { totalScore: distanceScore + floorScore, distanceScore, floorScore };
   };
 
   const formatDistance = (distance) => {
@@ -99,20 +125,21 @@ export default function Map({ onGuess, location, showAnswer, userGuess }) {
 
   // Handle submit
   const handleSubmit = () => {
-    if (!tempGuess || !location || submittedGuess) return;
+    if (!tempGuess || floorGuess === '' || !location || submittedGuess) return;
     const correctLat = location.latitude;
     const correctLng = location.longitude;
     const distance = calculateDistance(tempGuess.lat, tempGuess.lng, correctLat, correctLng);
-    const calculatedScore = calculateScore(distance);
-    setSubmittedGuess(tempGuess);
-    setScore(calculatedScore);
-    import('leaflet').then((L) => {
+    const scoreBreakdown = calculateScore(distance, floorGuess);
+    const submitted = { ...tempGuess, floor: Number(floorGuess) };
+    setSubmittedGuess(submitted);
+    setScore(scoreBreakdown.totalScore);
+    import('leaflet').then(() => {
       if (guessMarkerRef.current) {
-        guessMarkerRef.current.bindPopup(`<b>Your Guess (Submitted)</b><br>Lat: ${tempGuess.lat.toFixed(6)}<br>Lng: ${tempGuess.lng.toFixed(6)}<br>Distance: ${formatDistance(distance)}<br>Score: ${calculatedScore}/5000`).openPopup();
+        guessMarkerRef.current.bindPopup(`<b>Your Guess (Submitted)</b><br>Floor: ${formatFloor(floorGuess)}<br>Distance: ${formatDistance(distance)}<br>Score: ${scoreBreakdown.totalScore}/5000`).openPopup();
         guessMarkerRef.current.dragging?.disable();
       }
     });
-    if (onGuess) onGuess(calculatedScore, tempGuess.lat, tempGuess.lng); // Pass coordinates to parent
+    if (onGuess) onGuess(scoreBreakdown.totalScore, tempGuess.lat, tempGuess.lng, Number(floorGuess));
   };
 
   // Handle showing both markers when round ends (showAnswer = true)
@@ -136,7 +163,7 @@ export default function Map({ onGuess, location, showAnswer, userGuess }) {
         // Add answer marker
         answerMarkerRef.current = L.marker([correctLat, correctLng])
           .addTo(mapRef.current)
-          .bindPopup(`<b>Correct Location</b>`)
+          .bindPopup(`<b>Correct Location</b><br>Floor: ${formatFloor(location.level)}`)
           .openPopup();
         answerMarkerRef.current._icon.style.filter = "hue-rotate(-100deg)";
 
@@ -149,7 +176,7 @@ export default function Map({ onGuess, location, showAnswer, userGuess }) {
           if (guessMarkerRef.current) mapRef.current.removeLayer(guessMarkerRef.current);
           guessMarkerRef.current = L.marker([guessCoords.lat, guessCoords.lng])
             .addTo(mapRef.current)
-            .bindPopup(`<b>Your Guess</b><br>Lat: ${guessCoords.lat.toFixed(6)}<br>Lng: ${guessCoords.lng.toFixed(6)}`)
+            .bindPopup(`<b>Your Guess</b>${guessCoords.floor !== undefined ? `<br>Floor: ${formatFloor(guessCoords.floor)}` : ''}`)
             .openPopup();
 
           // Draw line
@@ -165,6 +192,7 @@ export default function Map({ onGuess, location, showAnswer, userGuess }) {
       } else {
         // Reset for new round
         setTempGuess(null);
+        setFloorGuess('');
         setSubmittedGuess(null);
         setScore(null);
         if (guessMarkerRef.current) {
@@ -187,10 +215,22 @@ export default function Map({ onGuess, location, showAnswer, userGuess }) {
         <div className="guess-info-panel">
           <div className="guess-info-title">Pending Guess</div>
           <div className="guess-info-detail">
-            Lat: {tempGuess.lat.toFixed(6)}<br />
-            Lng: {tempGuess.lng.toFixed(6)}
+            <label className="floor-guess-field" htmlFor="floor-guess">
+              <span>Floor</span>
+              <select
+                id="floor-guess"
+                value={floorGuess}
+                onChange={(event) => setFloorGuess(event.target.value)}
+                required
+              >
+                <option value="">Choose floor</option>
+                {FLOOR_OPTIONS.map((option) => (
+                  <option key={option.value} value={option.value}>{option.label}</option>
+                ))}
+              </select>
+            </label>
           </div>
-          <button onClick={handleSubmit} className="btn-submit">Submit Guess</button>
+          <button onClick={handleSubmit} className="btn-submit" disabled={floorGuess === ''}>Submit Guess</button>
         </div>
       )}
 
@@ -198,6 +238,7 @@ export default function Map({ onGuess, location, showAnswer, userGuess }) {
         <div className="score-panel">
           <div className="score-title">✓ Guess Submitted!</div>
           <div className="score-detail">Distance: {formatDistance(calculateDistance(submittedGuess.lat, submittedGuess.lng, location.latitude, location.longitude))}</div>
+          <div className="score-detail">Correct floor: {formatFloor(location.level)}</div>
           <div className="score-value">Score: {score} / 5000</div>
           <div className="score-waiting">Waiting for next round...</div>
         </div>

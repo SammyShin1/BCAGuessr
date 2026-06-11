@@ -11,6 +11,15 @@ const Map = dynamic(() => import("../../../components/Map"), {
   loading: () => <p className="loading">Loading map...</p>,
 });
 
+function formatFloor(value) {
+  const floor = Number(value);
+  if (floor === -1) return "Outside";
+  if (floor === 0) return "Basement";
+  if (floor === 1) return "Floor 1";
+  if (floor === 2) return "Floor 2";
+  return "Unknown";
+}
+
 export default function PrivateGamePage() {
   const { lobbyId } = useParams();
   const router = useRouter();
@@ -143,7 +152,7 @@ export default function PrivateGamePage() {
     setPlayers(playerData || []);
   }
 
-  async function handleGuess(score, guessLat, guessLng) {
+  async function handleGuess(score, guessLat, guessLng, guessFloor) {
     if (!user || !lobby || roundOver) return;
 
     setMessage("");
@@ -165,7 +174,7 @@ export default function PrivateGamePage() {
     }
 
     setLastScore(score);
-    setUserGuess({ lat: guessLat, lng: guessLng, score });
+    setUserGuess({ lat: guessLat, lng: guessLng, floor: guessFloor, score });
     setRoundOver(true);
     hasSubmittedRef.current = true;
 
@@ -242,7 +251,9 @@ export default function PrivateGamePage() {
   useEffect(() => {
     if (!lobbyId) return;
 
-    loadGame();
+    queueMicrotask(() => {
+      loadGame();
+    });
 
     const interval = setInterval(() => {
       if (hasSubmittedRef.current) {
@@ -343,6 +354,9 @@ export default function PrivateGamePage() {
           <p style={{ fontSize: "1.4rem", margin: "1rem 0" }}>
             Your Score:{" "}
             <span className="score-display">{lastScore}</span> / 5000
+          </p>
+          <p className="answer-floor">
+            Correct floor: <strong>{formatFloor(location.level)}</strong>
           </p>
 
           <div className="map-container">
