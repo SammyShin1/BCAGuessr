@@ -97,9 +97,6 @@ export default function Map({ onGuess, location, showAnswer, userGuess }) {
         maxBoundsViscosity: 0.75,
         minZoom: 18,
         maxZoom: 22,
-        zoomAnimation: false,
-        fadeAnimation: false,
-        markerZoomAnimation: false,
       }).setView([correctLat, correctLng], 18);
       mapRef.current.getContainer().style.cursor = 'crosshair';
 
