@@ -7,7 +7,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import '../globals.css';
 
-const Map = dynamic(() => import('../../components/Map'), {
+const DynamicMap = dynamic(() => import('../../components/Map'), {
   ssr: false,
   loading: () => <p className="loading">Loading map...</p>
 });
@@ -124,6 +124,24 @@ export default function GamePage() {
     return candidates.slice(0, count);
   }
 
+  async function fetchLocationsByIds(ids = []) {
+    const uniqueIds = Array.from(new Set(ids)).filter((id) => id !== null && id !== undefined);
+    if (!uniqueIds.length) return [];
+
+    const { data, error } = await supabase
+      .from('locations')
+      .select('*')
+      .in('id', uniqueIds);
+
+    if (error) {
+      console.error('fetchLocationsByIds error', error);
+      return [];
+    }
+
+    const locationById = new Map((data || []).map((item) => [item.id, item]));
+    return uniqueIds.map((id) => locationById.get(id)).filter(Boolean);
+  }
+
   function preloadImages(locations = []) {
     return Promise.all(locations.map((loc) => new Promise((res) => {
       if (!loc?.image_url) return res();
@@ -134,7 +152,7 @@ export default function GamePage() {
     })));
   }
 
-  async function createSession(userId, firstLocation) {
+  async function createSession(userId, firstLocation, locationIds = [firstLocation.id]) {
     const { data: existing } = await supabase
       .from('game_sessions')
       .select('*')
@@ -151,7 +169,7 @@ export default function GamePage() {
         round: 1,
         total_score: 0,
         current_location_id: firstLocation.id,
-        location_ids: [firstLocation.id],
+        location_ids: locationIds,
         status: 'active',
         mode: 'normal',
       })
@@ -210,22 +228,28 @@ export default function GamePage() {
     clearRoundCompletionState();
     setRoundOver(false);
     const newTotal = totalScore;
+    let activeSessionId = sessionId;
 
-    if (!sessionId) {
+    if (!activeSessionId) {
       const { data: userData, error: userError } = await supabase.auth.getUser();
       if (userError || !userData?.user) {
         console.error('Unable to create game session: user not logged in.');
         return;
       }
 
-      const session = await createSession(userData.user.id, location);
+      const session = await createSession(
+        userData.user.id,
+        location,
+        preloadedLocations.length ? preloadedLocations.map((item) => item.id) : [location.id]
+      );
       if (!session) return;
-      setSessionId(session.id);
+      activeSessionId = session.id;
+      setSessionId(activeSessionId);
     }
 
     if (round >= TOTAL_ROUNDS) {
       await saveScore(newTotal, 'normal');
-      await updateSession(sessionId, { status: 'complete', total_score: newTotal });
+      await updateSession(activeSessionId, { status: 'complete', total_score: newTotal });
       setGameOver(true);
     } else {
       const newRound = round + 1;
@@ -245,11 +269,11 @@ export default function GamePage() {
       setLocation(newLocation);
       setUserGuess(null);
 
-      await updateSession(sessionId, {
+      await updateSession(activeSessionId, {
         round: newRound,
         total_score: newTotal,
         current_location_id: newLocation.id,
-        location_ids: newUsedIds,
+        location_ids: preloadedLocations.length ? preloadedLocations.map((item) => item.id) : newUsedIds,
       });
     }
   }
@@ -268,7 +292,7 @@ export default function GamePage() {
     await preloadImages(preloaded);
 
     const firstLocation = preloaded[0];
-    const session = await createSession(userData.user.id, firstLocation);
+    const session = await createSession(userData.user.id, firstLocation, preloaded.map((item) => item.id));
     if (!session) return;
 
     setSessionId(session.id);
@@ -320,14 +344,30 @@ export default function GamePage() {
         setRound(existingSession.round);
         setTotalScore(restoredTotalScore);
 
-        const existingIds = existingSession.location_ids || [];
-        const needed = Math.max(0, TOTAL_ROUNDS - existingIds.length);
-        const extras = await fetchUniqueLocations(needed, existingIds);
-        const preloaded = [locationData, ...extras];
+        const storedIds = existingSession.location_ids || [];
+        const idsWithoutCurrent = storedIds.filter((id) => String(id) !== String(existingSession.current_location_id));
+        const currentIndex = Math.max(0, Math.min(existingSession.round - 1, idsWithoutCurrent.length));
+        const orderedIds = [
+          ...idsWithoutCurrent.slice(0, currentIndex),
+          existingSession.current_location_id,
+          ...idsWithoutCurrent.slice(currentIndex),
+        ];
+        const orderedStoredLocations = await fetchLocationsByIds(orderedIds);
+        const needed = Math.max(0, TOTAL_ROUNDS - orderedStoredLocations.length);
+        const extras = await fetchUniqueLocations(needed, orderedIds);
+        const preloaded = [...orderedStoredLocations, ...extras];
+        const currentLocation = orderedStoredLocations.find((item) => item.id === existingSession.current_location_id) || locationData;
+
         await preloadImages(preloaded);
         setPreloadedLocations(preloaded);
         setUsedLocationIds(preloaded.map((p) => p.id));
-        setLocation(locationData);
+        setLocation(currentLocation);
+
+        if (extras.length > 0) {
+          await updateSession(existingSession.id, {
+            location_ids: preloaded.map((item) => item.id),
+          });
+        }
 
         if (shouldRestoreCompletion) {
           setRoundOver(true);
@@ -345,7 +385,10 @@ export default function GamePage() {
         await preloadImages(preloaded);
 
         const firstLocation = preloaded[0];
-        setSessionId(null);
+        const session = await createSession(data.user.id, firstLocation, preloaded.map((item) => item.id));
+        if (!session) return;
+
+        setSessionId(session.id);
         setPreloadedLocations(preloaded);
         setUsedLocationIds(preloaded.map((p) => p.id));
         setLocation(firstLocation);
@@ -396,7 +439,7 @@ export default function GamePage() {
                 alt="Location clue"
               />
               <div className="map-container">
-                <Map
+                <DynamicMap
                   showAnswer={true}
                   location={location}
                   userGuess={userGuess}
@@ -420,7 +463,6 @@ export default function GamePage() {
         {leaveModal}
         <div style={{ textAlign: 'center', padding: '2rem 1rem' }}>
           <div className="card" style={{ maxWidth: '600px', margin: '0 auto' }}>
-            <h1 style={{ fontSize: '3rem', marginBottom: '1rem' }}>Game Over!</h1>
             <p style={{ fontSize: '1.5rem', margin: '1rem 0' }}>
               Total Score: <span className="score-display">{totalScore}</span> / {TOTAL_ROUNDS * 5000}
             </p>
@@ -464,7 +506,7 @@ export default function GamePage() {
               alt="BCA location challenge"
             />
             <div className="map-container">
-              <Map onGuess={nextRound} location={location} />
+              <DynamicMap onGuess={nextRound} location={location} />
             </div>
           </div>
           <p className={`difficulty-text ${difficultyInfo.className}`}>

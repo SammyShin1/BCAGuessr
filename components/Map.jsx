@@ -22,9 +22,13 @@ function formatFloor(value) {
 
 export default function Map({ onGuess, location, showAnswer, userGuess }) {
   const mapRef = useRef(null);
+  const mapContainerRef = useRef(null);
   const guessMarkerRef = useRef(null);
   const answerMarkerRef = useRef(null);
   const lineRef = useRef(null);
+  const clickEnabledRef = useRef(true);
+  const showAnswerRef = useRef(showAnswer);
+  const submittedGuessRef = useRef(null);
   const [tempGuess, setTempGuess] = useState(null);
   const [floorGuess, setFloorGuess] = useState('');
   const [submittedGuess, setSubmittedGuess] = useState(null);
@@ -65,10 +69,17 @@ export default function Map({ onGuess, location, showAnswer, userGuess }) {
 
   // Initialize map once when location changes
   useEffect(() => {
+    showAnswerRef.current = showAnswer;
+    submittedGuessRef.current = submittedGuess;
+  }, [showAnswer, submittedGuess]);
+
+  useEffect(() => {
     if (!location) return;
+    let cancelled = false;
 
     const initMap = async () => {
       const L = await import('leaflet');
+      if (cancelled || !mapContainerRef.current) return;
 
       if (mapRef.current) {
         mapRef.current.remove();
@@ -78,14 +89,17 @@ export default function Map({ onGuess, location, showAnswer, userGuess }) {
       const correctLat = location.latitude;
       const correctLng = location.longitude;
 
-      mapRef.current = L.map('map', {
+      mapRef.current = L.map(mapContainerRef.current, {
         maxBounds: [
           [40.8990, -74.0380],
           [40.9055, -74.0305],
         ],
         maxBoundsViscosity: 0.75,
         minZoom: 18,
-        maxZoom: 22
+        maxZoom: 22,
+        zoomAnimation: false,
+        fadeAnimation: false,
+        markerZoomAnimation: false,
       }).setView([correctLat, correctLng], 18);
       mapRef.current.getContainer().style.cursor = 'crosshair';
 
@@ -96,7 +110,7 @@ export default function Map({ onGuess, location, showAnswer, userGuess }) {
       }).addTo(mapRef.current);
 
       mapRef.current.on('click', (e) => {
-        if (showAnswer || submittedGuess) return;
+        if (!clickEnabledRef.current || showAnswerRef.current || submittedGuessRef.current) return;
         const { lat, lng } = e.latlng;
         if (guessMarkerRef.current) mapRef.current.removeLayer(guessMarkerRef.current);
         guessMarkerRef.current = L.marker([lat, lng], { draggable: true })
@@ -104,17 +118,19 @@ export default function Map({ onGuess, location, showAnswer, userGuess }) {
           .bindPopup(`Your Guess`)
           .openPopup();
         guessMarkerRef.current.on('dragend', function () {
+          if (!clickEnabledRef.current) return;
           const pos = this.getLatLng();
           setTempGuess({ lat: pos.lat, lng: pos.lng });
           this.bindPopup(`Your Guess`).openPopup();
         });
         setTempGuess({ lat, lng });
       });
-      setMapReady(true);
+      if (!cancelled) setMapReady(true);
     };
     initMap();
 
     return () => {
+      cancelled = true;
       if (mapRef.current) {
         mapRef.current.remove();
         mapRef.current = null;
@@ -133,6 +149,7 @@ export default function Map({ onGuess, location, showAnswer, userGuess }) {
     const submitted = { ...tempGuess, floor: Number(floorGuess) };
     setSubmittedGuess(submitted);
     setScore(scoreBreakdown.totalScore);
+    clickEnabledRef.current = false;
     import('leaflet').then(() => {
       if (guessMarkerRef.current) {
         guessMarkerRef.current.bindPopup(`<b>Your Guess (Submitted)</b><br>Floor: ${formatFloor(floorGuess)}<br>Distance: ${formatDistance(distance)}<br>Score: ${scoreBreakdown.totalScore}/5000`).openPopup();
@@ -144,7 +161,7 @@ export default function Map({ onGuess, location, showAnswer, userGuess }) {
 
   // Handle showing both markers when round ends (showAnswer = true)
   useEffect(() => {
-    if (!mapReady || !mapRef.current || !location) return;
+    if (!mapReady || !mapRef.current || !location || !showAnswer) return;
     const correctLat = location.latitude;
     const correctLng = location.longitude;
 
@@ -159,57 +176,48 @@ export default function Map({ onGuess, location, showAnswer, userGuess }) {
         lineRef.current = null;
       }
 
-      if (showAnswer) {
-        // Add answer marker
-        answerMarkerRef.current = L.marker([correctLat, correctLng])
+      clickEnabledRef.current = false;
+
+      // Add answer marker
+      answerMarkerRef.current = L.marker([correctLat, correctLng])
+        .addTo(mapRef.current)
+        .bindPopup(`<b>Correct Location</b><br>Floor: ${formatFloor(location.level)}`)
+        .openPopup();
+      answerMarkerRef.current._icon.style.filter = "hue-rotate(-100deg)";
+
+      // If userGuess is provided from parent, use that
+      let guessCoords = userGuess;
+      if (!guessCoords && submittedGuess) guessCoords = submittedGuess;
+
+      if (guessCoords) {
+        // Add guess marker (recreate it)
+        if (guessMarkerRef.current) mapRef.current.removeLayer(guessMarkerRef.current);
+        guessMarkerRef.current = L.marker([guessCoords.lat, guessCoords.lng], { draggable: false })
           .addTo(mapRef.current)
-          .bindPopup(`<b>Correct Location</b><br>Floor: ${formatFloor(location.level)}`)
+          .bindPopup(`<b>Your Guess</b>${guessCoords.floor !== undefined ? `<br>Floor: ${formatFloor(guessCoords.floor)}` : ''}`)
           .openPopup();
-        answerMarkerRef.current._icon.style.filter = "hue-rotate(-100deg)";
 
-        // If userGuess is provided from parent, use that
-        let guessCoords = userGuess;
-        if (!guessCoords && submittedGuess) guessCoords = submittedGuess;
+        // Draw line
+        const latlngs = [[guessCoords.lat, guessCoords.lng], [correctLat, correctLng]];
+        lineRef.current = L.polyline(latlngs, { color: '#FFFFFF', weight: 3, opacity: 0.8 }).addTo(mapRef.current);
 
-        if (guessCoords) {
-          // Add guess marker (recreate it)
-          if (guessMarkerRef.current) mapRef.current.removeLayer(guessMarkerRef.current);
-          guessMarkerRef.current = L.marker([guessCoords.lat, guessCoords.lng])
-            .addTo(mapRef.current)
-            .bindPopup(`<b>Your Guess</b>${guessCoords.floor !== undefined ? `<br>Floor: ${formatFloor(guessCoords.floor)}` : ''}`)
-            .openPopup();
-
-          // Draw line
-          const latlngs = [[guessCoords.lat, guessCoords.lng], [correctLat, correctLng]];
-          lineRef.current = L.polyline(latlngs, { color: '#FFFFFF', weight: 3, opacity: 0.8 }).addTo(mapRef.current);
-
-          // Fit bounds to show both markers
-          const bounds = L.latLngBounds([correctLat, correctLng], [guessCoords.lat, guessCoords.lng]);
-          mapRef.current.fitBounds(bounds, { padding: [50, 50] });
-        } else {
-          mapRef.current.setView([correctLat, correctLng], 18);
+        // Fit bounds to show both markers
+        const bounds = L.latLngBounds([correctLat, correctLng], [guessCoords.lat, guessCoords.lng]);
+        if (mapRef.current._panes && mapRef.current._panes.mapPane) {
+          mapRef.current.fitBounds(bounds, { padding: [50, 50], animate: false });
         }
       } else {
-        // Reset for new round
-        setTempGuess(null);
-        setFloorGuess('');
-        setSubmittedGuess(null);
-        setScore(null);
-        if (guessMarkerRef.current) {
-          mapRef.current.removeLayer(guessMarkerRef.current);
-          guessMarkerRef.current = null;
-        }
         mapRef.current.setView([correctLat, correctLng], 18);
       }
     };
     showMarkers();
-  }, [showAnswer, location, userGuess, mapReady]); // Now depends on userGuess from parent
+  }, [showAnswer, location, userGuess, mapReady]); // Now depends on userGuess
 
   if (!location) return <div className="loading">Loading map...</div>;
 
   return (
     <div className="map-wrapper">
-      <div id="map" className="map-container-leaflet"></div>
+      <div ref={mapContainerRef} className="map-container-leaflet" />
 
       {tempGuess && !submittedGuess && !showAnswer && (
         <div className="guess-info-panel">
