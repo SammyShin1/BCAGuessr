@@ -19,6 +19,7 @@
 
 # production
 /build
+/migration-backups
 
 # misc
 .DS_Store

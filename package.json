@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "migrate:images": "node --env-file=.env scripts/migrate-images-to-r2.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.10.3",

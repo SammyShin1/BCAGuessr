@@ -1,5 +1,40 @@
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
+## Migrating location images to Cloudflare R2
+
+Enable a public custom domain or `r2.dev` development URL for the bucket, then
+add these server-only values to `.env`:
+
+```bash
+SUPABASE_SERVICE_ROLE_KEY=
+R2_ACCOUNT_ID=
+R2_ACCESS_KEY_ID=
+R2_SECRET_ACCESS_KEY=
+R2_BUCKET_NAME=
+R2_PUBLIC_BASE_URL=https://your-public-r2-domain.example
+R2_OBJECT_PREFIX=locations
+```
+
+The R2 token needs **Object Read & Write** permission for the bucket. Use the
+Access Key ID and Secret Access Key shown when the R2 token is created. Do not
+prefix any of these secrets with `NEXT_PUBLIC_`.
+
+Preview the affected database rows:
+
+```bash
+npm run migrate:images
+```
+
+Upload each image, verify its public URL, and update `locations.image_url`:
+
+```bash
+npm run migrate:images -- --apply
+```
+
+The migration uses opaque object names, skips rows already using
+`R2_PUBLIC_BASE_URL`, and saves the original URL mapping under
+`migration-backups/` before changing the database.
+
 ## Getting Started
 
 First, run the development server:
