@@ -1,4 +1,5 @@
 import './globals.css'
+import Script from 'next/script'
 
 export default function RootLayout({ children }) {
   return (
@@ -13,6 +14,10 @@ export default function RootLayout({ children }) {
         <link rel="icon" href="/bcaguessr-logo-icon.png" />
       </head>
       <body style={{ margin: 0, padding: 0, boxSizing: 'border-box' }}>{children}</body>
+      <Script
+        src="https://kit.fontawesome.com/a86495e33e.js"
+        crossOrigin="anonymous"
+      />
     </ html>
   );
 }

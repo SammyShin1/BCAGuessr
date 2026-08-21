@@ -69,7 +69,7 @@ function RoundNav({ canGoPrevious, canGoNext, onPrevious, onNext }) {
         disabled={!canGoPrevious}
         aria-label="Previous round"
       >
-        ‹
+        <i className="fa-solid fa-chevron-left" aria-hidden="true"></i>
       </button>
       <button
         type="button"
@@ -78,7 +78,7 @@ function RoundNav({ canGoPrevious, canGoNext, onPrevious, onNext }) {
         disabled={!canGoNext}
         aria-label="Next round"
       >
-        ›
+        <i className="fa-solid fa-chevron-right" aria-hidden="true"></i>
       </button>
     </>
   );
@@ -592,11 +592,11 @@ export default function GamePage() {
         <div style={{ textAlign: 'center', padding: '2rem 1rem' }}>
           <div className="card" style={{ maxWidth: '1100px', margin: '0 auto' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '1rem', marginBottom: '0.5rem' }}>
-              <h2 style={{ fontSize: '2rem' }}>Round {round} Complete!</h2>
+              <h2 style={{ fontSize: '2rem' }}>Round {round}</h2>
               <button onClick={handleReturnHome} className="btn">Return Home</button>
             </div>
             <p style={{ fontSize: '1.5rem', margin: '0.5rem 0' }}>
-              Score: <span className="score-display">{lastScore}</span> / 5000
+              Score: <span className="score-display">{lastScore}</span>
             </p>
             <p style={{ color: '#9ca3af', marginBottom: '1rem' }}>
               Total: {totalScore} / {round * 5000}
@@ -668,7 +668,7 @@ export default function GamePage() {
         <div className="card">
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '1rem', marginBottom: '1rem' }}>
             <div className="round-header">
-              Round {round}/{TOTAL_ROUNDS}
+              Round {round}
             </div>
             <button onClick={handleReturnHome} className="btn">Return Home</button>
           </div>

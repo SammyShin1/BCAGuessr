@@ -247,7 +247,7 @@ export default function Map({ onGuess, location, showAnswer, userGuess }) {
           <div className="score-title">✓ Guess Submitted!</div>
           <div className="score-detail">Distance: {formatDistance(calculateDistance(submittedGuess.lat, submittedGuess.lng, location.latitude, location.longitude))}</div>
           <div className="score-detail">Correct floor: {formatFloor(location.level)}</div>
-          <div className="score-value">Score: {score} / 5000</div>
+          <div className="score-value">Score: {score}</div>
           <div className="score-waiting">Waiting for next round...</div>
         </div>
       )}

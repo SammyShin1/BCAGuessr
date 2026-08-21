@@ -222,7 +222,7 @@ export default function DailyPage() {
         {hasGuessed && (
           <div className="answer-section">
             <p style={{ fontSize: '1.25rem', marginBottom: '0.5rem' }}>
-              Your Score: <span className="score-display">{score}</span> / 5000
+              Your Score: <span className="score-display">{score}</span>
             </p>
             <p style={{ color: '#9ca3af' }}>
               {score === 5000 ? 'Perfect! Amazing guess!' : score >= 4000 ? 'Great job!' : score >= 2500 ? 'Good effort!' : 'Try again tomorrow for a better score!'}

@@ -349,11 +349,11 @@ export default function PrivateGamePage() {
     return (
       <main style={{ padding: "1rem" }}>
         <div className="card">
-          <h2>Round {lobby.round} Complete!</h2>
+          <h2>Round {lobby.round}</h2>
 
           <p style={{ fontSize: "1.4rem", margin: "1rem 0" }}>
             Your Score:{" "}
-            <span className="score-display">{lastScore}</span> / 5000
+            <span className="score-display">{lastScore}</span>
           </p>
           <p className="answer-floor">
             Correct floor: <strong>{formatFloor(location.level)}</strong>
