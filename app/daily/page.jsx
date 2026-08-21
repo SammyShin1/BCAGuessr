@@ -4,6 +4,7 @@ import dynamic from 'next/dynamic';
 import { supabase } from '../../lib/supabase';
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { recencyWeight, weightedPickDeterministic } from '../../lib/randomize';
 import '../globals.css'
 
 const Map = dynamic(() => import('../../components/Map'), {
@@ -61,14 +62,18 @@ export default function DailyPage() {
       const today = getLocalDateKey();
       setTodayDate(today);
 
-      // Simple hash of today's date to pick a location
+      // Simple hash of today's date, turned into a stable [0, 1) seed
       let hash = 0;
       for (let i = 0; i < today.length; i++) {
         hash = ((hash << 5) - hash) + today.charCodeAt(i);
         hash |= 0;
       }
-      const dailyIndex = Math.abs(hash) % data.length;
-      const dailyLocation = data[dailyIndex];
+      const seedFraction = (Math.abs(hash) % 1000000) / 1000000;
+
+      // Same location for everyone on a given day, but recently-added
+      // locations are proportionally more likely to be picked over time.
+      const weights = data.map((loc) => recencyWeight(loc.created_at));
+      const dailyLocation = weightedPickDeterministic(data, weights, seedFraction);
       setLocation(dailyLocation);
       setHasGuessed(false);
       setScore(null);

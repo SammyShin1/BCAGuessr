@@ -5,6 +5,7 @@ import { supabase } from '../../lib/supabase';
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { recencyWeight, weightedSampleWithoutReplacement } from '../../lib/randomize';
 import '../globals.css';
 
 const DynamicMap = dynamic(() => import('../../components/Map'), {
@@ -117,11 +118,20 @@ export default function GamePage() {
       candidates = candidates.filter((c) => !excludeSet.has(c.id));
     }
 
-    for (let i = candidates.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [candidates[i], candidates[j]] = [candidates[j], candidates[i]];
+    if (candidates.length <= count) {
+      // Not enough candidates to meaningfully weight/sample — just shuffle
+      // what we have so the small pool doesn't always appear in the same order.
+      for (let i = candidates.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [candidates[i], candidates[j]] = [candidates[j], candidates[i]];
+      }
+      return candidates.slice(0, count);
     }
-    return candidates.slice(0, count);
+
+    // Favor more recently added locations, without ever fully excluding older ones.
+    const now = Date.now();
+    const weights = candidates.map((loc) => recencyWeight(loc.created_at, now));
+    return weightedSampleWithoutReplacement(candidates, weights, count);
   }
 
   async function fetchLocationsByIds(ids = []) {

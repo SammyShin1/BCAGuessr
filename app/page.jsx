@@ -87,6 +87,12 @@ export default function HomePage() {
     router.push("/daily");
   }
 
+  async function handleSubmitLocation() {
+    const user = await checkAuthOrRedirect();
+    if (!user) return;
+    router.push("/submit");
+  }
+
   async function handleNewGame() {
     if (pendingSessionId) {
       await supabase
@@ -148,6 +154,7 @@ export default function HomePage() {
                 <span>
                   Logged in as: {user.email || user.user_metadata?.full_name || "User"}
                 </span>
+                <button onClick={handleSubmitLocation} className="btn">Submit a Location</button>
                 {ADMIN_EMAILS.has(user.email?.toLowerCase()) && (
                   <Link href="/admin">
                     <button className="btn">Admin</button>
@@ -222,6 +229,17 @@ export default function HomePage() {
           <Link href="/leaderboard" className="btn">
             View Leaderboard
           </Link>
+        </div>
+
+        <div className="feature-card">
+          <span className="feature-index">04</span>
+          <h3>Submit a Location</h3>
+          <p>
+            Add your own photo, pin it on the map, get it added after review
+          </p>
+          <button onClick={handleSubmitLocation} className="btn">
+            Submit a Location
+          </button>
         </div>
       </div>
     </div>
