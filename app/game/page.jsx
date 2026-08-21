@@ -84,15 +84,23 @@ function RoundNav({ canGoPrevious, canGoNext, onPrevious, onNext }) {
   );
 }
 
-function RoundScoreStrip({ roundResults = [] }) {
+function RoundScoreStrip({ roundResults = [], locations = [] }) {
   return (
     <div className="round-score-strip" aria-label="Scores by image">
       {Array.from({ length: TOTAL_ROUNDS }, (_, index) => {
         const result = roundResults[index];
+        const roundLocation = locations[index];
         return (
           <div key={index} className={`round-score-cell ${result ? 'scored' : ''}`}>
-            <span>Image {index + 1}</span>
-            <strong>{result ? result.score : '-'}</strong>
+            {roundLocation?.image_url ? (
+              <img src={roundLocation.image_url} alt={`Image ${index + 1}`} />
+            ) : (
+              <div className="round-score-thumb-empty">Image {index + 1}</div>
+            )}
+            <div className="round-score-overlay">
+              <span>Image {index + 1}</span>
+              <strong>{result ? result.score : '-'}</strong>
+            </div>
           </div>
         );
       })}
@@ -383,7 +391,8 @@ export default function GamePage() {
   }
 
   async function goToNextRound(activeSessionId = sessionId) {
-    if (round >= TOTAL_ROUNDS || !roundResults[round - 1]) return;
+    if (!roundResults[round - 1]) return;
+    if (round >= TOTAL_ROUNDS) return;
 
     const newRound = round + 1;
     const newLocation = preloadedLocations[newRound - 1];
@@ -397,6 +406,7 @@ export default function GamePage() {
     const newUsedIds = Array.from(new Set([...usedLocationIds, newLocation.id]));
 
     setMaxUnlockedRound(newUnlockedRound);
+    setGameOver(false);
     setUsedLocationIds(newUsedIds);
     setVisibleRound(newRound);
     saveGameProgressState(activeSessionId, roundResults, newUnlockedRound);
@@ -412,7 +422,13 @@ export default function GamePage() {
   }
 
   function goToPreviousRound() {
+    if (gameOver) {
+      setGameOver(false);
+      setVisibleRound(TOTAL_ROUNDS);
+      return;
+    }
     if (round <= 1 || !roundResults[round - 2]) return;
+    setGameOver(false);
     setVisibleRound(round - 1);
   }
 
@@ -564,16 +580,16 @@ export default function GamePage() {
   const leaveModal = showLeaveModal ? (
     <LeaveModal onStay={handleStay} onLeave={handleLeaveConfirmed} round={round} />
   ) : null;
-  const canGoPrevious = round > 1 && Boolean(roundResults[round - 2]);
-  const canGoNext = round < TOTAL_ROUNDS && Boolean(roundResults[round - 1]);
-  const roundNav = !gameOver ? (
+  const canGoPrevious = gameOver ? Boolean(roundResults[TOTAL_ROUNDS - 1]) : round > 1 && Boolean(roundResults[round - 2]);
+  const canGoNext = !gameOver && Boolean(roundResults[round - 1]);
+  const roundNav = (
     <RoundNav
       canGoPrevious={canGoPrevious}
       canGoNext={canGoNext}
       onPrevious={goToPreviousRound}
-      onNext={() => { goToNextRound(); }}
+      onNext={() => { continueGame(); }}
     />
-  ) : null;
+  );
 
   if (checkingAuth) {
     return (
@@ -584,60 +600,17 @@ export default function GamePage() {
     );
   }
 
-  if (roundOver) {
+  if (gameOver) {
     return (
       <>
         {leaveModal}
         {roundNav}
         <div style={{ textAlign: 'center', padding: '2rem 1rem' }}>
-          <div className="card" style={{ maxWidth: '1100px', margin: '0 auto' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '1rem', marginBottom: '0.5rem' }}>
-              <h2 style={{ fontSize: '2rem' }}>Round {round}</h2>
-              <button onClick={handleReturnHome} className="btn">Return Home</button>
-            </div>
-            <p style={{ fontSize: '1.5rem', margin: '0.5rem 0' }}>
-              Score: <span className="score-display">{lastScore}</span>
-            </p>
-            <p style={{ color: '#9ca3af', marginBottom: '1rem' }}>
-              Total: {totalScore} / {round * 5000}
-            </p>
-            <p className="answer-floor">
-              Correct floor: <strong>{formatFloor(location.level)}</strong>
-            </p>
-            <div className="game-container">
-              <GameImage
-                src={location.image_url}
-                alt="Location clue"
-              />
-              <div className="map-container">
-                <DynamicMap
-                  showAnswer={true}
-                  location={location}
-                  userGuess={userGuess}
-                />
-              </div>
-            </div>
-            <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center', marginTop: '1rem', flexWrap: 'wrap' }}>
-              <button onClick={continueGame} className="btn btn-primary">
-                {round >= TOTAL_ROUNDS ? 'See Final Score' : 'Next Round'}
-              </button>
-            </div>
-          </div>
-        </div>
-      </>
-    );
-  }
-
-  if (gameOver) {
-    return (
-      <>
-        {leaveModal}
-        <div style={{ textAlign: 'center', padding: '2rem 1rem' }}>
-          <div className="card" style={{ maxWidth: '600px', margin: '0 auto' }}>
+          <div className="card game-over-card">
             <p style={{ fontSize: '1.5rem', margin: '1rem 0' }}>
               Total Score: <span className="score-display">{totalScore}</span> / {TOTAL_ROUNDS * 5000}
             </p>
-            <RoundScoreStrip roundResults={roundResults} />
+            <RoundScoreStrip roundResults={roundResults} locations={preloadedLocations} />
             <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center', marginTop: '2rem' }}>
               <button onClick={resetGame} className="btn btn-primary">Play Again</button>
               <Link href="/leaderboard"><button className="btn">View Leaderboard</button></Link>
@@ -665,25 +638,55 @@ export default function GamePage() {
       {leaveModal}
       {roundNav}
       <div style={{ padding: '1rem 0' }}>
-        <div className="card">
+        <div className="card game-round-card">
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '1rem', marginBottom: '1rem' }}>
             <div className="round-header">
               Round {round}
             </div>
             <button onClick={handleReturnHome} className="btn">Return Home</button>
           </div>
+          <div className="round-status-panel">
+            {roundOver && (
+              <div className="round-result-row">
+                <p>
+                  Score: <span className="score-display">{lastScore}</span>
+                </p>
+                <p>
+                  Total: <strong>{totalScore}</strong> / {round * 5000}
+                </p>
+                <p className="answer-floor">
+                  Correct floor: <strong>{formatFloor(location.level)}</strong>
+                </p>
+              </div>
+            )}
+          </div>
           <div className="game-container">
             <GameImage
               src={location.image_url}
-              alt="BCA location challenge"
+              alt={roundOver ? "Location clue" : "BCA location challenge"}
             />
             <div className="map-container">
-              <DynamicMap onGuess={nextRound} location={location} />
+              <DynamicMap
+                key={`${location.id}-${round}-${roundOver ? 'answer' : 'guess'}`}
+                onGuess={roundOver ? undefined : nextRound}
+                showAnswer={roundOver}
+                location={location}
+                userGuess={roundOver ? userGuess : undefined}
+              />
             </div>
           </div>
           <p className={`difficulty-text ${difficultyInfo.className}`}>
             {difficultyInfo.label}
           </p>
+          <div className="round-actions">
+            {roundOver ? (
+              <button onClick={continueGame} className="btn btn-primary">
+                {round >= TOTAL_ROUNDS ? 'See Final Score' : 'Next Round'}
+              </button>
+            ) : (
+              <span aria-hidden="true" className="round-action-spacer" />
+            )}
+          </div>
         </div>
       </div>
     </>

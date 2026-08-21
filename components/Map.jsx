@@ -32,7 +32,6 @@ export default function Map({ onGuess, location, showAnswer, userGuess }) {
   const [tempGuess, setTempGuess] = useState(null);
   const [floorGuess, setFloorGuess] = useState('');
   const [submittedGuess, setSubmittedGuess] = useState(null);
-  const [score, setScore] = useState(null);
   const [mapReady, setMapReady] = useState(false);
 
   const calculateDistance = (lat1, lng1, lat2, lng2) => {
@@ -76,6 +75,7 @@ export default function Map({ onGuess, location, showAnswer, userGuess }) {
   useEffect(() => {
     if (!location) return;
     let cancelled = false;
+    clickEnabledRef.current = true;
 
     const initMap = async () => {
       const L = await import('leaflet');
@@ -148,7 +148,6 @@ export default function Map({ onGuess, location, showAnswer, userGuess }) {
     const scoreBreakdown = calculateScore(distance, floorGuess);
     const submitted = { ...tempGuess, floor: Number(floorGuess) };
     setSubmittedGuess(submitted);
-    setScore(scoreBreakdown.totalScore);
     clickEnabledRef.current = false;
     import('leaflet').then(() => {
       if (guessMarkerRef.current) {
@@ -221,7 +220,6 @@ export default function Map({ onGuess, location, showAnswer, userGuess }) {
 
       {tempGuess && !submittedGuess && !showAnswer && (
         <div className="guess-info-panel">
-          <div className="guess-info-title">Pending Guess</div>
           <div className="guess-info-detail">
             <label className="floor-guess-field" htmlFor="floor-guess">
               <span>Floor</span>
@@ -239,16 +237,6 @@ export default function Map({ onGuess, location, showAnswer, userGuess }) {
             </label>
           </div>
           <button onClick={handleSubmit} className="btn-submit" disabled={floorGuess === ''}>Submit Guess</button>
-        </div>
-      )}
-
-      {submittedGuess && !showAnswer && score !== null && (
-        <div className="score-panel">
-          <div className="score-title">✓ Guess Submitted!</div>
-          <div className="score-detail">Distance: {formatDistance(calculateDistance(submittedGuess.lat, submittedGuess.lng, location.latitude, location.longitude))}</div>
-          <div className="score-detail">Correct floor: {formatFloor(location.level)}</div>
-          <div className="score-value">Score: {score}</div>
-          <div className="score-waiting">Waiting for next round...</div>
         </div>
       )}
     </div>
