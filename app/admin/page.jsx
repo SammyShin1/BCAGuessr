@@ -179,7 +179,9 @@ export default function AdminPage() {
 
   useEffect(() => {
     if (checkingAuth) return;
-    loadSubmissions();
+    queueMicrotask(() => {
+      loadSubmissions();
+    });
   }, [checkingAuth, loadSubmissions]);
 
   async function loadLocationsQuietly() {

@@ -104,7 +104,10 @@ export default function SubmitPage() {
   }, []);
 
   useEffect(() => {
-    if (userId) loadMySubmissions(userId);
+    if (!userId) return;
+    queueMicrotask(() => {
+      loadMySubmissions(userId);
+    });
   }, [userId, loadMySubmissions]);
 
   const handleFileChange = (event) => {

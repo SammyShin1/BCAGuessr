@@ -14,6 +14,7 @@ const DynamicMap = dynamic(() => import('../../components/Map'), {
 });
 
 const TOTAL_ROUNDS = 5;
+const GAME_PROGRESS_STATE_KEY = 'bcaguessr_game_progress';
 const ROUND_COMPLETION_STATE_KEY = 'bcaguessr_round_completion';
 
 function getDifficultyInfo(difficulty) {
@@ -54,6 +55,88 @@ function LeaveModal({ onStay, onLeave, round }) {
   );
 }
 
+function sumRoundScores(roundResults = []) {
+  return roundResults.reduce((sum, result) => sum + (result?.score || 0), 0);
+}
+
+function RoundNav({ canGoPrevious, canGoNext, onPrevious, onNext }) {
+  return (
+    <>
+      <button
+        type="button"
+        className="round-nav-arrow round-nav-arrow-left"
+        onClick={onPrevious}
+        disabled={!canGoPrevious}
+        aria-label="Previous round"
+      >
+        ‹
+      </button>
+      <button
+        type="button"
+        className="round-nav-arrow round-nav-arrow-right"
+        onClick={onNext}
+        disabled={!canGoNext}
+        aria-label="Next round"
+      >
+        ›
+      </button>
+    </>
+  );
+}
+
+function RoundScoreStrip({ roundResults = [] }) {
+  return (
+    <div className="round-score-strip" aria-label="Scores by image">
+      {Array.from({ length: TOTAL_ROUNDS }, (_, index) => {
+        const result = roundResults[index];
+        return (
+          <div key={index} className={`round-score-cell ${result ? 'scored' : ''}`}>
+            <span>Image {index + 1}</span>
+            <strong>{result ? result.score : '-'}</strong>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function GameImage({ src, alt }) {
+  const [displaySrc, setDisplaySrc] = useState(null);
+
+  useEffect(() => {
+    if (!src) return undefined;
+
+    let active = true;
+    const image = new Image();
+    image.onload = () => {
+      if (active) setDisplaySrc(src);
+    };
+    image.onerror = () => {
+      if (active) setDisplaySrc(src);
+    };
+    image.src = src;
+
+    return () => {
+      active = false;
+    };
+  }, [src]);
+
+  return (
+    <div className="game-image-frame">
+      {displaySrc !== src && (
+        <div className="game-image-loading">loading...</div>
+      )}
+      {displaySrc === src && (
+        <img
+          src={displaySrc}
+          className="game-image"
+          alt={alt}
+        />
+      )}
+    </div>
+  );
+}
+
 export default function GamePage() {
   const router = useRouter();
   const [checkingAuth, setCheckingAuth] = useState(true);
@@ -68,21 +151,21 @@ export default function GamePage() {
   const [usedLocationIds, setUsedLocationIds] = useState([]);
   const [preloadedLocations, setPreloadedLocations] = useState([]);
   const [showLeaveModal, setShowLeaveModal] = useState(false);
+  const [roundResults, setRoundResults] = useState([]);
+  const [maxUnlockedRound, setMaxUnlockedRound] = useState(1);
 
-  const saveRoundCompletionState = (sessionId, round, totalScore, lastScore, userGuess) => {
+  const saveGameProgressState = (sessionId, results, unlockedRound) => {
     if (typeof window === 'undefined') return;
-    localStorage.setItem(ROUND_COMPLETION_STATE_KEY, JSON.stringify({
+    localStorage.setItem(GAME_PROGRESS_STATE_KEY, JSON.stringify({
       sessionId,
-      round,
-      totalScore,
-      lastScore,
-      userGuess,
+      roundResults: results,
+      maxUnlockedRound: unlockedRound,
     }));
   };
 
-  const loadRoundCompletionState = () => {
+  const loadGameProgressState = () => {
     if (typeof window === 'undefined') return null;
-    const raw = localStorage.getItem(ROUND_COMPLETION_STATE_KEY);
+    const raw = localStorage.getItem(GAME_PROGRESS_STATE_KEY);
     if (!raw) return null;
     try {
       return JSON.parse(raw);
@@ -91,8 +174,9 @@ export default function GamePage() {
     }
   };
 
-  const clearRoundCompletionState = () => {
+  const clearGameProgressState = () => {
     if (typeof window === 'undefined') return;
+    localStorage.removeItem(GAME_PROGRESS_STATE_KEY);
     localStorage.removeItem(ROUND_COMPLETION_STATE_KEY);
   };
 
@@ -224,20 +308,49 @@ export default function GamePage() {
     if (error) console.error('Error saving score:', error);
   }
 
+  function setVisibleRound(targetRound, locations = preloadedLocations, results = roundResults) {
+    const targetLocation = locations[targetRound - 1];
+    const targetResult = results[targetRound - 1] || null;
+
+    setRound(targetRound);
+    if (targetLocation) setLocation(targetLocation);
+
+    if (targetResult) {
+      setLastScore(targetResult.score);
+      setTotalScore(targetResult.totalScoreAfter);
+      setUserGuess(targetResult.guess);
+      setRoundOver(true);
+    } else {
+      setLastScore(0);
+      setTotalScore(sumRoundScores(results));
+      setUserGuess(null);
+      setRoundOver(false);
+    }
+  }
+
   function nextRound(score, guessLat, guessLng, guessFloor) {
-    const nextTotal = totalScore + score;
     const nextGuess = { lat: guessLat, lng: guessLng, floor: guessFloor, score };
+    const nextResults = [...roundResults];
+    const previousTotal = sumRoundScores(nextResults.slice(0, round - 1));
+    const nextTotal = previousTotal + score;
+
+    nextResults[round - 1] = {
+      round,
+      locationId: location.id,
+      score,
+      totalScoreAfter: nextTotal,
+      guess: nextGuess,
+    };
+
+    setRoundResults(nextResults);
     setLastScore(score);
     setTotalScore(nextTotal);
     setUserGuess(nextGuess);
     setRoundOver(true);
-    saveRoundCompletionState(sessionId, round, nextTotal, score, nextGuess);
+    saveGameProgressState(sessionId, nextResults, maxUnlockedRound);
   }
 
   async function continueGame() {
-    clearRoundCompletionState();
-    setRoundOver(false);
-    const newTotal = totalScore;
     let activeSessionId = sessionId;
 
     if (!activeSessionId) {
@@ -258,27 +371,37 @@ export default function GamePage() {
     }
 
     if (round >= TOTAL_ROUNDS) {
+      const newTotal = sumRoundScores(roundResults);
       await saveScore(newTotal, 'normal');
       await updateSession(activeSessionId, { status: 'complete', total_score: newTotal });
+      clearGameProgressState();
+      setTotalScore(newTotal);
       setGameOver(true);
     } else {
-      const newRound = round + 1;
-      let newLocation = null;
-      if (preloadedLocations && preloadedLocations.length >= newRound) {
-        newLocation = preloadedLocations[newRound - 1];
-      }
-      if (!newLocation) {
-        console.error('No preloaded location available for round', newRound);
-        return;
-      }
+      await goToNextRound(activeSessionId);
+    }
+  }
 
-      const newUsedIds = Array.from(new Set([...usedLocationIds, newLocation.id]));
-      setUsedLocationIds(newUsedIds);
-      setRound(newRound);
-      setTotalScore(newTotal);
-      setLocation(newLocation);
-      setUserGuess(null);
+  async function goToNextRound(activeSessionId = sessionId) {
+    if (round >= TOTAL_ROUNDS || !roundResults[round - 1]) return;
 
+    const newRound = round + 1;
+    const newLocation = preloadedLocations[newRound - 1];
+    if (!newLocation) {
+      console.error('No preloaded location available for round', newRound);
+      return;
+    }
+
+    const newUnlockedRound = Math.max(maxUnlockedRound, newRound);
+    const newTotal = sumRoundScores(roundResults);
+    const newUsedIds = Array.from(new Set([...usedLocationIds, newLocation.id]));
+
+    setMaxUnlockedRound(newUnlockedRound);
+    setUsedLocationIds(newUsedIds);
+    setVisibleRound(newRound);
+    saveGameProgressState(activeSessionId, roundResults, newUnlockedRound);
+
+    if (activeSessionId && newRound > maxUnlockedRound) {
       await updateSession(activeSessionId, {
         round: newRound,
         total_score: newTotal,
@@ -288,6 +411,11 @@ export default function GamePage() {
     }
   }
 
+  function goToPreviousRound() {
+    if (round <= 1 || !roundResults[round - 2]) return;
+    setVisibleRound(round - 1);
+  }
+
   async function resetGame() {
     const { data: userData } = await supabase.auth.getUser();
     if (!userData?.user) return;
@@ -295,7 +423,7 @@ export default function GamePage() {
     if (sessionId) {
       await updateSession(sessionId, { status: 'complete' });
     }
-    clearRoundCompletionState();
+    clearGameProgressState();
 
     const preloaded = await fetchUniqueLocations(TOTAL_ROUNDS, []);
     if (!preloaded || preloaded.length === 0) return;
@@ -313,12 +441,24 @@ export default function GamePage() {
     setGameOver(false);
     setRoundOver(false);
     setUserGuess(null);
+    setRoundResults([]);
+    setMaxUnlockedRound(1);
     setUsedLocationIds(preloaded.map((p) => p.id));
     setLocation(firstLocation);
   }
 
   useEffect(() => {
     async function init() {
+      setCheckingAuth(true);
+      setLocation(null);
+      setRound(1);
+      setTotalScore(0);
+      setLastScore(0);
+      setRoundOver(false);
+      setGameOver(false);
+      setUserGuess(null);
+      setRoundResults([]);
+
       const { data, error } = await supabase.auth.getUser();
 
       if (error || !data.user) { router.push('/login'); return; }
@@ -346,13 +486,18 @@ export default function GamePage() {
           .eq('id', existingSession.current_location_id)
           .single();
 
-        const completionState = loadRoundCompletionState();
-        const shouldRestoreCompletion = completionState && completionState.sessionId === existingSession.id && completionState.round === existingSession.round;
-        const restoredTotalScore = shouldRestoreCompletion ? completionState.totalScore : existingSession.total_score;
+        const progressState = loadGameProgressState();
+        const storedRoundResults = progressState?.sessionId === existingSession.id && Array.isArray(progressState.roundResults)
+          ? progressState.roundResults
+          : [];
+        const restoredUnlockedRound = Math.max(
+          existingSession.round || 1,
+          progressState?.sessionId === existingSession.id ? (progressState.maxUnlockedRound || 1) : 1
+        );
 
         setSessionId(existingSession.id);
         setRound(existingSession.round);
-        setTotalScore(restoredTotalScore);
+        setMaxUnlockedRound(restoredUnlockedRound);
 
         const storedIds = existingSession.location_ids || [];
         const idsWithoutCurrent = storedIds.filter((id) => String(id) !== String(existingSession.current_location_id));
@@ -371,7 +516,7 @@ export default function GamePage() {
         await preloadImages(preloaded);
         setPreloadedLocations(preloaded);
         setUsedLocationIds(preloaded.map((p) => p.id));
-        setLocation(currentLocation);
+        setRoundResults(storedRoundResults);
 
         if (extras.length > 0) {
           await updateSession(existingSession.id, {
@@ -379,11 +524,15 @@ export default function GamePage() {
           });
         }
 
-        if (shouldRestoreCompletion) {
+        const currentResult = storedRoundResults[existingSession.round - 1] || null;
+        setLocation(preloaded[existingSession.round - 1] || currentLocation);
+        if (currentResult) {
           setRoundOver(true);
-          setLastScore(completionState.lastScore || 0);
-          setUserGuess(completionState.userGuess || null);
+          setTotalScore(currentResult.totalScoreAfter);
+          setLastScore(currentResult.score || 0);
+          setUserGuess(currentResult.guess || null);
         } else {
+          setTotalScore(sumRoundScores(storedRoundResults));
           setRoundOver(false);
           setLastScore(0);
           setUserGuess(null);
@@ -402,6 +551,8 @@ export default function GamePage() {
         setPreloadedLocations(preloaded);
         setUsedLocationIds(preloaded.map((p) => p.id));
         setLocation(firstLocation);
+        setRoundResults([]);
+        setMaxUnlockedRound(1);
       }
 
       setCheckingAuth(false);
@@ -413,12 +564,22 @@ export default function GamePage() {
   const leaveModal = showLeaveModal ? (
     <LeaveModal onStay={handleStay} onLeave={handleLeaveConfirmed} round={round} />
   ) : null;
+  const canGoPrevious = round > 1 && Boolean(roundResults[round - 2]);
+  const canGoNext = round < TOTAL_ROUNDS && Boolean(roundResults[round - 1]);
+  const roundNav = !gameOver ? (
+    <RoundNav
+      canGoPrevious={canGoPrevious}
+      canGoNext={canGoNext}
+      onPrevious={goToPreviousRound}
+      onNext={() => { goToNextRound(); }}
+    />
+  ) : null;
 
   if (checkingAuth) {
     return (
       <>
         {leaveModal}
-        <div className="loading">Checking login...</div>
+        <div className="loading">Loading game...</div>
       </>
     );
   }
@@ -427,6 +588,7 @@ export default function GamePage() {
     return (
       <>
         {leaveModal}
+        {roundNav}
         <div style={{ textAlign: 'center', padding: '2rem 1rem' }}>
           <div className="card" style={{ maxWidth: '1100px', margin: '0 auto' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '1rem', marginBottom: '0.5rem' }}>
@@ -443,9 +605,8 @@ export default function GamePage() {
               Correct floor: <strong>{formatFloor(location.level)}</strong>
             </p>
             <div className="game-container">
-              <img
+              <GameImage
                 src={location.image_url}
-                className="game-image"
                 alt="Location clue"
               />
               <div className="map-container">
@@ -476,6 +637,7 @@ export default function GamePage() {
             <p style={{ fontSize: '1.5rem', margin: '1rem 0' }}>
               Total Score: <span className="score-display">{totalScore}</span> / {TOTAL_ROUNDS * 5000}
             </p>
+            <RoundScoreStrip roundResults={roundResults} />
             <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center', marginTop: '2rem' }}>
               <button onClick={resetGame} className="btn btn-primary">Play Again</button>
               <Link href="/leaderboard"><button className="btn">View Leaderboard</button></Link>
@@ -501,6 +663,7 @@ export default function GamePage() {
   return (
     <>
       {leaveModal}
+      {roundNav}
       <div style={{ padding: '1rem 0' }}>
         <div className="card">
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '1rem', marginBottom: '1rem' }}>
@@ -510,9 +673,8 @@ export default function GamePage() {
             <button onClick={handleReturnHome} className="btn">Return Home</button>
           </div>
           <div className="game-container">
-            <img
+            <GameImage
               src={location.image_url}
-              className="game-image"
               alt="BCA location challenge"
             />
             <div className="map-container">
